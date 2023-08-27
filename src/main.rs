@@ -5,6 +5,15 @@ use serde_yaml;
 use serde_json::json;
 use expanduser::expanduser;
 use structopt::StructOpt;
+use tui::Terminal;
+use tui::backend::CrosstermBackend;
+use tui::widgets::{Block, Borders, List, ListItem};
+use tui::layout::{Layout, Constraint, Direction};
+use tui::style::{Color, Style};
+use std::collections::HashMap;
+use tui::widgets::ListState;
+use tui::text::{Span, Spans};
+use std::io;
 
 use reqwest::{
     header::{HeaderMap, ACCEPT, USER_AGENT, AUTHORIZATION},
@@ -30,10 +39,19 @@ struct Repository {
     default: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 struct Issue {
     title: String,
     html_url: String,
+
+    #[serde(rename = "labels")]
+    tags: Vec<Label>,
+}
+
+
+#[derive(Debug, Deserialize, Clone)]
+struct Label {
+    name: String,
 }
 
 #[derive(StructOpt, Debug)]
@@ -57,7 +75,14 @@ enum Command {
         
         #[structopt()]
         details: String,
+    
+    
+        #[structopt(short, long)]
+        tags: Option<Vec<String>>, 
+
     }
+
+
 }
 
 pub fn construct_header(token: &str) -> HeaderMap {
@@ -80,14 +105,47 @@ async fn list_tasks(github_config: &GitHubConfig) -> Result<(), Box<dyn std::err
 
         let response = client.get(&url).headers(construct_header(&github_config.token)).send().await?;
 
-        // Check if the response status is successful
         if response.status().is_success() {
             let body = response.text().await?;
+            println!("Received JSON response:\n{}", body); // Add this line to print the response            
             let issues: Vec<Issue> = serde_json::from_str(&body)?;
-
-            println!("Issues for {}/{}:", repo.owner, repo.repo);
-            for issue in issues {
-                println!("{} - {}", issue.title, issue.html_url);
+    
+            // Create a TUI terminal backend
+            let stdout = io::stdout();
+            let backend = CrosstermBackend::new(stdout);
+            let mut terminal = Terminal::new(backend)?;
+    
+            // Set up a TUI layout
+            terminal.clear()?;
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .margin(1)
+                .constraints([Constraint::Min(1)].as_ref())
+                .split(terminal.size()?);
+    
+            // Group issues by tags
+            let mut issues_by_tags: HashMap<String, Vec<Issue>> = HashMap::new();
+            for issue in &issues {
+                for tag in &issue.tags {
+                    let tag_name = &tag.name;                    
+                    issues_by_tags
+                        .entry(tag_name.to_string())
+                        .or_insert_with(Vec::new)
+                        .push(issue.clone());
+                }
+            }
+    
+            // Display issues grouped by tags using TUI
+            for (tag, tag_issues) in &issues_by_tags {
+                terminal.draw(|f| {
+                    let items: Vec<ListItem> = tag_issues.iter().map(|issue| ListItem::new(issue.title.clone())).collect();
+                    let items = List::new(items)
+                        .block(Block::default().title(tag.as_str()))
+                        .style(Style::default().fg(Color::White))
+                        .highlight_style(Style::default().bg(Color::Yellow).fg(Color::Black))
+                        .highlight_symbol("> ");
+                    f.render_stateful_widget(items, chunks[0], &mut ListState::default());
+                })?;
             }
         } else {
             println!(
@@ -101,8 +159,7 @@ async fn list_tasks(github_config: &GitHubConfig) -> Result<(), Box<dyn std::err
     Ok(())
 }
 
-async fn add_new_task(github_config: &GitHubConfig, title: &str, details: &str) -> Result<(), Box<dyn std::error::Error>> {
-
+async fn add_new_task(github_config: &GitHubConfig, title: &str, details: &str, tags: &Option<Vec<String>>) -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::new();
 
     let default_repo = github_config
@@ -116,10 +173,14 @@ async fn add_new_task(github_config: &GitHubConfig, title: &str, details: &str) 
         default_repo.owner, default_repo.repo
     );
 
-    let issue_details = json!({
+    let mut issue_details = json!({
         "title": title,
         "body": details,
     });
+
+    if let Some(ts) = tags {
+        issue_details["labels"] = serde_json::Value::Array(ts.iter().map(|label| serde_json::Value::String(label.clone())).collect());
+    }    
 
     let response = client
         .post(&add_url)
@@ -154,7 +215,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let github_config = &config.github_com;
     match args.cmd {
 
-        Some(Command::Add { title, details }) => add_new_task(&github_config, &title, &details).await?,
+        Some(Command::Add { title, details, tags }) => add_new_task(&github_config, &title, &details, &tags).await?,
         None => list_tasks(&github_config).await?,
 
     };
