@@ -67,9 +67,21 @@ struct GitLabRepository {
 struct Issue {
     title: String,
     html_url: String,
+    /// task/ issue id referencing the foreign system
+    id: String,
 
     #[serde(rename = "labels")]
     tags: Vec<Label>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct GitHubIssue {
+    number: u32,
+    title: String,
+    html_url: String,
+
+    // Use the new GitLabLabel type for tags
+    labels: Vec<Label>,
 }
 
 
@@ -85,6 +97,7 @@ struct GitLabLabel(String);
 
 #[derive(Debug, Deserialize, Clone)]
 struct GitLabIssue {
+    iid: u32,
     title: String,
     web_url: String,
 
@@ -138,7 +151,7 @@ async fn collect_tasks_from_github(github_config: &GitHubConfig) -> Result<Vec<I
     let client = Client::new();
     let mut all_issues = Vec::new();  // Create a vector to collect all issues
 
-    for repo in &github_config.repositories {
+    for (idx, repo) in github_config.repositories.iter().enumerate() {
         let url = format!("https://api.github.com/repos/{}/{}/issues", repo.owner, repo.repo);
 
         let response = client
@@ -150,7 +163,15 @@ async fn collect_tasks_from_github(github_config: &GitHubConfig) -> Result<Vec<I
         if response.status().is_success() {
             let body = response.text().await?;
 
-            let issues: Vec<Issue> = serde_json::from_str(&body)?;
+            let github_issues: Vec<GitHubIssue> = serde_json::from_str(&body)?;
+            let issues = github_issues.into_iter().map(|github_issue| {
+                Issue {
+                    id: format!("gh{}/{}",idx,github_issue.number),
+                    title: github_issue.title,
+                    html_url: github_issue.html_url,
+                    tags: github_issue.labels,
+                }
+            });            
             all_issues.extend(issues);  // Add the collected issues to the vector
 
         } else {
@@ -171,7 +192,7 @@ async fn collect_tasks_from_gitlab(gitlab_config: &GitLabConfig) -> Result<Vec<I
     let client = Client::new();
     let mut all_issues = Vec::new();
 
-    for repo in &gitlab_config.repositories {
+    for (idx, repo) in gitlab_config.repositories.iter().enumerate() {
         let url = format!("https://gitlab.com/api/v4/projects/{}/issues", repo.project_id);
 
         let response = client
@@ -188,6 +209,7 @@ async fn collect_tasks_from_gitlab(gitlab_config: &GitLabConfig) -> Result<Vec<I
             // Convert GitLab issues to the internal Issue representation
             let issues = gitlab_issues.into_iter().map(|gitlab_issue| {
                 Issue {
+                    id: format!("gl{}/{}",idx,gitlab_issue.iid),
                     title: gitlab_issue.title,
                     html_url: gitlab_issue.web_url,
                     tags: gitlab_issue.labels.into_iter().map(|label| Label { name: label.0 }).collect(),
@@ -228,7 +250,7 @@ fn display_tasks_in_table(issues: &Vec<Issue>) -> Result<(), anyhow::Error> {
                     println!("{:-<40}", "-"); // Divider line
             
                     for issue in tag_issues {
-                        println!(" - {}", issue.title);
+                        println!(" - {} {}", issue.id, issue.title);
                     }
             
                     println!(); // Empty line between tags
