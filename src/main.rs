@@ -6,10 +6,12 @@ use serde_json::json;
 use expanduser::expanduser;
 use structopt::StructOpt;
 use log::{debug, info, warn, error};
-
+use regex::Regex;
 use anyhow::Result;
+use lazy_static::lazy_static;
 
 use std::collections::HashMap;
+use either::*;
 
 use reqwest::{
     header::{HeaderMap, ACCEPT, USER_AGENT, AUTHORIZATION},
@@ -26,6 +28,59 @@ struct AppConfig {
 
     #[serde(rename = "gitlab.com")]
     gitlab_com: Option<GitLabConfig>,
+}
+
+lazy_static!{
+    /// Regex for tskmstr representations of a task across all task providers
+    pub static ref TASK_ID_RE: Regex = Regex::new(r"^(?<task_source>gh|gl)(?<todosrc_idx>[0-9]+)/(?<issue_id>[A-Za-z0-9_-]+)$").unwrap();
+}
+
+#[derive(Debug, Deserialize, Clone)]
+enum TodoSource {
+    GitHub(u16, String), // unique idx, issue_id
+    GitLab(u16, String), // unique idx, issue_id
+}
+
+impl std::str::FromStr for TodoSource {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+
+        if let Some(task_id) = TASK_ID_RE.captures(s) {
+            match &task_id["task_source"] {
+                "gh" => {
+                    let todosrc_idx = u16::from_str_radix(&task_id["todosrc_idx"],10).unwrap();
+                    Ok(TodoSource::GitHub(todosrc_idx, task_id["issue_id"].to_string()))
+                }
+                "gl" => {
+                    let todosrc_idx = u16::from_str_radix(&task_id["todosrc_idx"],10).unwrap();
+                    Ok(TodoSource::GitLab(todosrc_idx, task_id["issue_id"].to_string()))
+                }
+                _ => Err(anyhow::anyhow!("Invalid task source")),            }
+        } else {
+            Err(anyhow::anyhow!("Invalid task ID format"))        }
+    }
+}
+
+impl TodoSource {
+    pub fn task_supplier<'a>(self, app_config: &'a AppConfig) -> Either<&'a GitHubRepository, &'a GitLabRepository> {
+        match self {
+            TodoSource::GitHub(todosrc_idx, _) => {
+                let github_config = &app_config.github_com;
+                let github_repo = github_config
+                    .as_ref()
+                    .and_then(|config| config.repositories.get(todosrc_idx as usize));
+                Either::Left(github_repo.expect("Invalid GitHub index"))
+            }
+            TodoSource::GitLab(todosrc_idx, _) => {
+                let gitlab_config = &app_config.gitlab_com;
+                let gitlab_repo = gitlab_config
+                    .as_ref()
+                    .and_then(|config| config.repositories.get(todosrc_idx as usize));
+                Either::Right(gitlab_repo.expect("Invalid GitLab index"))
+            }
+        }
+    }
 }
 
 impl Default for AppConfig {
@@ -117,6 +172,23 @@ struct Args {
     cmd: Option<Command>,
 }
 
+
+use std::str::FromStr;
+
+#[derive(Debug, StructOpt)]
+struct CloseCommand {
+    #[structopt(help = "ID of the task to close")]
+    id: String,
+}
+
+impl FromStr for CloseCommand {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(CloseCommand { id: s.to_string() })
+    }
+}
+
 #[derive(StructOpt, Debug)]
 enum Command {
     #[structopt(about = "Add a new issue to the default repository")]
@@ -131,12 +203,15 @@ enum Command {
         #[structopt(short, long)]
         tags: Option<Vec<String>>, 
 
-    }
+    },
+
+    #[structopt(about = "Close a task")]
+    Close(CloseCommand),
 
 
 }
 
-pub fn construct_header(token: &str) -> HeaderMap {
+pub fn construct_github_header(token: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert(USER_AGENT, "User".parse().unwrap());
     headers.insert(
@@ -145,6 +220,68 @@ pub fn construct_header(token: &str) -> HeaderMap {
     );
     headers.insert(ACCEPT, "application/vnd.github.v3+json".parse().unwrap());
     return headers;
+}
+
+pub fn construct_gitlab_header(token: &str) -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    headers.insert("PRIVATE-TOKEN", format!("{}",token).parse().unwrap());
+    return headers;
+}
+
+async fn close_task(source: TodoSource, app_config: &AppConfig) -> Result<()> {
+    let client = Client::new();
+
+    // this is ugly (somthing about partial move from the todoSource - ChatGPT recommended this :-D - it does compile tbf)
+    let (todosrc_idx, issue_id) = match &source {
+        TodoSource::GitHub(idx, id) => (*idx, id.clone()),
+        TodoSource::GitLab(idx, id) => (*idx, id.clone()),
+    };
+
+    match source {
+        TodoSource::GitHub(_, _) => {
+            let repo_config = source.task_supplier(&app_config).left().unwrap();
+            let url = format!("https://api.github.com/repos/{}/{}/issues/{}", repo_config.owner, repo_config.repo, issue_id);
+            debug!("github: will close {}", url);
+
+            let response = client
+                .patch(&url)
+                .headers(construct_github_header(&app_config.github_com.as_ref().unwrap().token))
+                .json(&serde_json::json!({
+                    "state": "closed"
+                }))
+                .send()
+                .await?;
+
+            if response.status().is_success() {
+                println!("Task {} closed in GitHub repo: {}/{}", issue_id, repo_config.owner, repo_config.repo );
+            } else {
+                println!("Error: Unable to close task {} in GitHub repo {}/{}. Status: {:?}", issue_id, repo_config.owner, repo_config.repo, response.status());
+            }
+        }
+        TodoSource::GitLab(_, _) => {
+            let repo_config = source.task_supplier(&app_config).right().unwrap();
+
+            let url = format!("https://gitlab.com/api/v4/projects/{}/issues/{}", repo_config.project_id, issue_id);
+            debug!("gitlab: will close {}", url);
+
+            let response = client
+                .put(&url)
+                .headers(construct_gitlab_header(&app_config.gitlab_com.as_ref().unwrap().token))
+                .json(&serde_json::json!({
+                    "state_event": "close"
+                }))
+                .send()
+                .await?;
+
+            if response.status().is_success() {
+                println!("Task {} closed in GitLab project: {}", issue_id, repo_config.project_id );
+            } else {
+                println!("Error: Unable to close {} issue in GitLab project: {}. Status: {:?}", issue_id, repo_config.project_id, response.status());
+            }
+        }
+    }
+
+    Ok(())
 }
 
 async fn collect_tasks_from_github(github_config: &GitHubConfig) -> Result<Vec<Issue>, anyhow::Error> {
@@ -156,7 +293,7 @@ async fn collect_tasks_from_github(github_config: &GitHubConfig) -> Result<Vec<I
 
         let response = client
             .get(&url)
-            .headers(construct_header(&github_config.token))
+            .headers(construct_github_header(&github_config.token))
             .send()
             .await?;
 
@@ -262,7 +399,7 @@ fn display_tasks_in_table(issues: &Vec<Issue>) -> Result<(), anyhow::Error> {
 async fn aggregate_and_display_all_tasks(
     github_config: &Option<GitHubConfig>,
     gitlab_config: &Option<GitLabConfig>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), anyhow::Error> {
 
 
     let mut all_issues = Vec::new();
@@ -283,7 +420,7 @@ async fn aggregate_and_display_all_tasks(
 }
 
 
-async fn add_new_task(github_config: &GitHubConfig, title: &str, details: &str, tags: &Option<Vec<String>>) -> Result<(), Box<dyn std::error::Error>> {
+async fn add_new_task(github_config: &GitHubConfig, title: &str, details: &str, tags: &Option<Vec<String>>) -> Result<(), anyhow::Error> {
     let client = Client::new();
 
     let default_repo = github_config
@@ -308,7 +445,7 @@ async fn add_new_task(github_config: &GitHubConfig, title: &str, details: &str, 
 
     let response = client
         .post(&add_url)
-        .headers(construct_header(&github_config.token))
+        .headers(construct_github_header(&github_config.token))
         .header(reqwest::header::CONTENT_TYPE, "application/json")
         .body(issue_details.to_string())
         .send().await?;
@@ -328,7 +465,7 @@ async fn add_new_task(github_config: &GitHubConfig, title: &str, details: &str, 
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), anyhow::Error> {
 
     let args = Args::from_args();
     // Read the repository configuration from YAML
@@ -351,6 +488,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match args.cmd {
 
         Some(Command::Add { title, details, tags }) => add_new_task(&github_config.as_ref().unwrap(), &title, &details, &tags).await?,
+        Some(Command::Close(close_cmd)) => {
+            close_task(TodoSource::from_str(&close_cmd.id)?, &config).await?;
+        }        
         None => aggregate_and_display_all_tasks(&github_config, &gitlab_config).await?,
 
     };
