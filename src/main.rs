@@ -12,22 +12,33 @@ use lazy_static::lazy_static;
 
 use std::collections::HashMap;
 use either::*;
+use colored::{Colorize, Color};
 
 use reqwest::{
     header::{HeaderMap, ACCEPT, USER_AGENT, AUTHORIZATION},
      Client
 };
 
+
 #[derive(Debug, Deserialize)]
 struct AppConfig {
 
     debug: Option<bool>,
+
+    colors: Colors,
 
     #[serde(rename = "github.com")]
     github_com: Option<GitHubConfig>,
 
     #[serde(rename = "gitlab.com")]
     gitlab_com: Option<GitLabConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Colors {
+    issue_id: String,
+    title: String,
+    tags: String,
 }
 
 lazy_static!{
@@ -89,7 +100,12 @@ impl Default for AppConfig {
             debug: None,
             github_com: None,
             gitlab_com: None,
-        }
+            colors: Colors {
+                issue_id: "magenta".to_string(),
+                title: "blue".to_string(),
+                tags: "green".to_string(),
+            }, 
+       }
     }
 }
 
@@ -231,10 +247,10 @@ pub fn construct_gitlab_header(token: &str) -> HeaderMap {
 async fn close_task(source: TodoSource, app_config: &AppConfig) -> Result<()> {
     let client = Client::new();
 
-    // this is ugly (somthing about partial move from the todoSource - ChatGPT recommended this :-D - it does compile tbf)
-    let (todosrc_idx, issue_id) = match &source {
-        TodoSource::GitHub(idx, id) => (*idx, id.clone()),
-        TodoSource::GitLab(idx, id) => (*idx, id.clone()),
+
+    let issue_id = match &source {
+        TodoSource::GitHub(idx, id) =>  id.clone(),
+        TodoSource::GitLab(idx, id) =>  id.clone(),
     };
 
     match source {
@@ -367,7 +383,7 @@ async fn collect_tasks_from_gitlab(gitlab_config: &GitLabConfig) -> Result<Vec<I
     Ok(all_issues)
 }
 
-fn display_tasks_in_table(issues: &Vec<Issue>) -> Result<(), anyhow::Error> {
+fn display_tasks_in_table(issues: &Vec<Issue>, colors: &Colors) -> Result<(), anyhow::Error> {
 
                 // Group issues by tags
                 let mut issues_by_tags: HashMap<String, Vec<Issue>> = HashMap::new();
@@ -383,11 +399,12 @@ fn display_tasks_in_table(issues: &Vec<Issue>) -> Result<(), anyhow::Error> {
     
     
                 for (tag, tag_issues) in &issues_by_tags {
-                    println!("Tag: {}", tag);
+                    println!("Tag: {}", tag.color(Color::from_str(&colors.tags).unwrap()));
                     println!("{:-<40}", "-"); // Divider line
             
                     for issue in tag_issues {
-                        println!(" - {} {}", issue.id, issue.title);
+                        let tags = format!("({})", issue.tags.iter().map(|t| t.name.clone()).collect::<Vec<String>>().join(", "));
+                        println!(" - {} {} {}", issue.id.color(Color::from_str(&colors.issue_id).unwrap()), issue.title.color(Color::from_str(&colors.title).unwrap()), tags.color(Color::from_str(&colors.tags).unwrap()));
                     }
             
                     println!(); // Empty line between tags
@@ -399,6 +416,7 @@ fn display_tasks_in_table(issues: &Vec<Issue>) -> Result<(), anyhow::Error> {
 async fn aggregate_and_display_all_tasks(
     github_config: &Option<GitHubConfig>,
     gitlab_config: &Option<GitLabConfig>,
+    colors: &Colors,
 ) -> Result<(), anyhow::Error> {
 
 
@@ -414,7 +432,7 @@ async fn aggregate_and_display_all_tasks(
         all_issues.extend(gitlab_tasks);
     }
 
-    let _ = display_tasks_in_table(&all_issues);
+    let _ = display_tasks_in_table(&all_issues, &colors);
 
     Ok(())
 }
@@ -451,7 +469,9 @@ async fn add_new_task(github_config: &GitHubConfig, title: &str, details: &str, 
         .send().await?;
 
     if response.status().is_success() {
-        let issue: Issue = response.json::<Issue>().await?;
+        // debug!("{}",response.status());
+        // let t = response.text().await?;
+        let issue: GitHubIssue = response.json::<GitHubIssue>().await?;
         println!("New issue created:");
         println!("Title: {}", issue.title);
         println!("URL: {}", issue.html_url);
@@ -485,13 +505,14 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let github_config = &config.github_com;
     let gitlab_config = &config.gitlab_com;
+    let colors = &config.colors;
     match args.cmd {
 
         Some(Command::Add { title, details, tags }) => add_new_task(&github_config.as_ref().unwrap(), &title, &details, &tags).await?,
         Some(Command::Close(close_cmd)) => {
             close_task(TodoSource::from_str(&close_cmd.id)?, &config).await?;
         }        
-        None => aggregate_and_display_all_tasks(&github_config, &gitlab_config).await?,
+        None => aggregate_and_display_all_tasks(&github_config, &gitlab_config, &colors).await?,
 
     };
 
