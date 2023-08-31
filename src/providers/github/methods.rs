@@ -10,6 +10,8 @@ use crate::providers::github::SHORT_CODE_GITHUB;
 
 use serde_json::json;
 
+use super::model::GitHubRepository;
+
 pub fn construct_github_header(token: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert(USER_AGENT, "User".parse().unwrap());
@@ -63,7 +65,8 @@ pub async fn collect_tasks_from_github(
     Ok(all_issues) // Return the vector of collected issues
 }
 
-pub async fn add_new_task(
+pub async fn add_new_task_github(
+    github_repo: &GitHubRepository,
     github_config: &GitHubConfig,
     title: &str,
     details: &str,
@@ -71,15 +74,9 @@ pub async fn add_new_task(
 ) -> Result<(), anyhow::Error> {
     let client = Client::new();
 
-    let default_repo = github_config
-        .repositories
-        .iter()
-        .find(|repo| repo.default.unwrap_or(false))
-        .expect("No default repository found");
-
     let add_url = format!(
         "https://api.github.com/repos/{}/{}/issues",
-        default_repo.owner, default_repo.repo
+        github_repo.owner, github_repo.repo
     );
 
     let mut issue_details = json!({

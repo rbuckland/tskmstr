@@ -15,13 +15,13 @@ pub struct GitHubIssue {
     pub labels: Vec<GitHubLabel>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct GitHubConfig {
     pub token: String,
     pub repositories: Vec<GitHubRepository>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct GitHubRepository {
     pub owner: String,
     pub repo: String,

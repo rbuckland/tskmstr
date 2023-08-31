@@ -14,13 +14,13 @@ pub struct GitLabIssue {
     pub labels: Vec<GitLabLabel>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct GitLabConfig {
     pub token: String,
     pub repositories: Vec<GitLabRepository>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct GitLabRepository {
     pub project_id: String,
     pub default: Option<bool>,

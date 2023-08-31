@@ -7,15 +7,14 @@ use serde_yaml;
 use structopt::StructOpt;
 use tokio;
 mod config;
-mod providers;
-mod output;
 mod control;
+mod output;
+mod providers;
 
-use std::str::FromStr;
-use providers::common::model::TodoSource;
 use config::AppConfig;
-use control::close_task;
-use providers::github::methods::add_new_task;
+use control::*;
+use providers::common::model::TodoSource;
+use std::str::FromStr;
 
 use output::aggregate_and_display_all_tasks;
 
@@ -30,7 +29,6 @@ struct Args {
     #[structopt(subcommand)]
     cmd: Option<Command>,
 }
-
 
 #[derive(Debug, StructOpt)]
 struct CloseCommand {
@@ -50,11 +48,15 @@ impl FromStr for CloseCommand {
 enum Command {
     #[structopt(about = "Add a new issue to the default repository")]
     Add {
+
         #[structopt()]
         title: String,
 
         #[structopt()]
         details: String,
+
+        #[structopt()]
+        provider_and_id: Option<String>,
 
         #[structopt(short, long)]
         tags: Option<Vec<String>>,
@@ -63,8 +65,6 @@ enum Command {
     #[structopt(about = "Close a task")]
     Close(CloseCommand),
 }
-
-
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -82,19 +82,18 @@ async fn main() -> Result<(), anyhow::Error> {
         simple_logger::init_with_level(log::Level::Info).expect("Failed to initialize logger");
     }
 
-    let github_config = &config.github_com;
-    let gitlab_config = &config.gitlab_com;
     let colors = &config.colors;
     match args.cmd {
         Some(Command::Add {
             title,
             details,
+            provider_and_id,
             tags,
-        }) => add_new_task(&github_config.as_ref().unwrap(), &title, &details, &tags).await?,
+        }) => add_new_task(&provider_and_id, &config, &title, &details, &tags).await?,
         Some(Command::Close(close_cmd)) => {
             close_task(TodoSource::from_str(&close_cmd.id)?, &config).await?;
         }
-        None => aggregate_and_display_all_tasks(&github_config, &gitlab_config, &colors).await?,
+        None => aggregate_and_display_all_tasks(&config, &colors).await?,
     };
 
     Ok(())

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::providers::common::model::Issue;
+use crate::{providers::common::model::Issue, config::AppConfig};
 use crate::providers::gitlab::model::GitLabConfig;
 use crate::providers::github::model::GitHubConfig;
 use crate::providers::github::methods::collect_tasks_from_github;
@@ -51,18 +51,17 @@ pub fn display_tasks_in_table(issues: &Vec<Issue>, colors: &Colors) -> Result<()
 
 
 pub async fn aggregate_and_display_all_tasks(
-    github_config: &Option<GitHubConfig>,
-    gitlab_config: &Option<GitLabConfig>,
+    config: &AppConfig,
     colors: &Colors,
 ) -> Result<(), anyhow::Error> {
     let mut all_issues = Vec::new();
 
-    if let Some(github_config) = github_config {
+    if let Some(github_config) = &config.github_com {
         let github_tasks = collect_tasks_from_github(github_config).await?;
         all_issues.extend(github_tasks);
     }
 
-    if let Some(gitlab_config) = gitlab_config {
+    if let Some(gitlab_config) = &config.gitlab_com  {
         let gitlab_tasks = collect_tasks_from_gitlab(gitlab_config).await?;
         all_issues.extend(gitlab_tasks);
     }

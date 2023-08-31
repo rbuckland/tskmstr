@@ -3,12 +3,15 @@ use crate::providers::gitlab::model::GitLabConfig;
 use crate::providers::gitlab::model::GitLabIssue;
 use crate::providers::gitlab::SHORT_CODE_GITLAB;
 use anyhow::Result;
+use serde_json::json;
 
 use crate::providers::common::model::Label;
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
 
 use reqwest::{header::HeaderMap, Client};
+
+use super::model::GitLabRepository;
 
 pub fn construct_gitlab_header(token: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
@@ -62,4 +65,54 @@ pub async fn collect_tasks_from_gitlab(
     }
 
     Ok(all_issues)
+}
+
+pub async fn add_new_task_gitlab(
+    gitlab_repo: &GitLabRepository,
+    gitlab_config: &GitLabConfig,
+    title: &str,
+    details: &str,
+    tags: &Option<Vec<String>>,
+) -> Result<(), anyhow::Error> {
+
+    debug!("Adding a new task via gitlab: {} [{:?}]", &title, &tags);
+
+    let client = Client::new();
+
+     let add_url = format!(
+        "https://gitlab.com/api/v4/projects/{}/issues",
+        gitlab_repo.project_id
+    );
+
+    let mut issue_details = json!({
+        "title": title,
+        "description": details,
+    });
+
+    if let Some(ts) = tags {
+        issue_details["labels"] = ts.iter().map(|label| label.clone()).collect::<Vec<String>>().into();
+    }
+
+    let response = client
+        .post(&add_url)
+        .headers(construct_gitlab_header(&gitlab_config.token))
+        .header(reqwest::header::CONTENT_TYPE, "application/json")
+        .json(&issue_details)
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        // debug!("{}",response.status());
+        // let t = response.text().await?;
+        let issue: GitLabIssue = response.json::<GitLabIssue>().await?;
+        println!("New issue created:");
+        println!("Title: {}", issue.title);
+        println!("URL: {}", issue.web_url);
+    } else {
+        println!(
+            "Error: Unable to create issue. Status: {:?}",
+            response.status()
+        );
+    }
+    Ok(())
 }
