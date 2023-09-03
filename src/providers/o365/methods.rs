@@ -1,4 +1,4 @@
-use super::model::{O365Config, O365Task, O365TodoList};
+use super::model::{O365Config, O365Task, O365TodoConfiguration};
 
 pub async fn collect_tasks_from_o365(
     o365_config: &O365Config,
@@ -10,7 +10,7 @@ pub async fn collect_tasks_from_o365(
 }
 
 pub async fn add_new_task_o365(
-    o365_todolist: &O365TodoList,
+    o365_todolist: &O365TodoConfiguration,
     o365_config: &O365Config,
     title: &str,
     details: &str,

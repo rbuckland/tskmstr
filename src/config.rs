@@ -2,8 +2,9 @@ use serde::Deserialize;
 
 use crate::providers::github::model::{GitHubConfig, GitHubRepository};
 use crate::providers::gitlab::model::{GitLabConfig, GitLabRepository};
-use crate::providers::o365::model::{O365Config, O365TodoList};
+use crate::providers::o365::model::{O365Config, O365TodoConfiguration};
 
+#[allow(unused_variables)]
 use log::{debug, error, info, warn};
 
 #[derive(Debug, Deserialize)]
@@ -25,7 +26,7 @@ pub struct AppConfig {
 pub enum TodoSupplier {
     GitHub(GitHubRepository),
     GitLab(GitLabRepository),
-    O365(O365TodoList),
+    O365(O365TodoConfiguration),
 }
 
 impl AppConfig {

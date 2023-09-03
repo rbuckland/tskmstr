@@ -1,3 +1,4 @@
+#![feature(type_alias_impl_trait)]
 use anyhow::Result;
 use expanduser::expanduser;
 #[allow(unused_imports)]
@@ -18,6 +19,8 @@ use std::str::FromStr;
 
 use output::aggregate_and_display_all_tasks;
 
+use crate::providers::o365::auth::start_server_main;
+
 #[derive(StructOpt, Debug)]
 struct Args {
     #[structopt(short, long)]
@@ -35,6 +38,9 @@ struct CloseCommand {
     #[structopt(help = "ID of the task to close")]
     id: String,
 }
+
+#[derive(Debug, StructOpt)]
+struct AuthCommand {}
 
 impl FromStr for CloseCommand {
     type Err = String;
@@ -64,6 +70,9 @@ enum Command {
 
     #[structopt(about = "Close a task")]
     Close(CloseCommand),
+    #[structopt(about = "Authenticate")]
+    Auth(AuthCommand),
+
 }
 
 #[tokio::main]
@@ -92,6 +101,11 @@ async fn main() -> Result<(), anyhow::Error> {
         }) => add_new_task(&provider_and_id, &config, &title, &details, &tags).await?,
         Some(Command::Close(close_cmd)) => {
             close_task(TodoSource::from_str(&close_cmd.id)?, &config).await?;
+        }
+        Some(Command::Auth(_)) => {
+            debug!("auth called");
+            start_server_main(&config.o365.unwrap().todo_lists[0]).await;
+
         }
         None => aggregate_and_display_all_tasks(&config, &colors).await?,
     };

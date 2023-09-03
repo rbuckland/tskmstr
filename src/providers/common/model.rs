@@ -12,7 +12,6 @@ use crate::providers::github::model::GitHubRepository;
 use crate::providers::gitlab::SHORT_CODE_GITLAB;
 use crate::providers::github::SHORT_CODE_GITHUB;
 use crate::providers::o365::SHORT_CODE_O365;
-use crate::providers::o365::model::O365TodoList;
 
 
 

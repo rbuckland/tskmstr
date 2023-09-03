@@ -13,13 +13,15 @@ pub struct O365Task {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct O365Config {
-    pub client_id: String,
-    pub client_secret: String,
-    pub todo_lists: Vec<O365TodoList>,
-
+    pub todo_lists: Vec<O365TodoConfiguration>,
 }
+
 #[derive(Debug, Deserialize, Clone)]
-pub struct O365TodoList {
-    pub list_id: String,
+pub struct O365TodoConfiguration {
+    pub name: String,
+    pub application_client_id: String,
+    pub object_id: String,
+    pub directory_tenant_id: String,
+    pub client_secret: String,
     pub default: Option<bool>,
 }
