@@ -1,0 +1,14 @@
+colors:
+  tags: green
+  title: blue
+  issue_id: red
+labels:
+  priority_labels:
+    - urgent
+    - todo
+  priority_timeframe: 48hrs
+gitlab.com:
+  token: glpat-foobar
+  repositories:
+    - project_id: someorg%2Fmy-tasks
+      default: true
