@@ -1,3 +1,6 @@
+use std::collections::HashSet;
+use std::hash::Hash;
+
 use serde::Deserialize;
 
 use crate::providers::github::model::{GitHubConfig, GitHubRepository};
@@ -12,6 +15,8 @@ pub struct AppConfig {
 
     pub colors: Colors,
 
+    pub labels: LabelConfig,
+
     #[serde(rename = "github.com")]
     pub github_com: Option<GitHubConfig>,
 
@@ -19,6 +24,12 @@ pub struct AppConfig {
     pub gitlab_com: Option<GitLabConfig>,
 
     pub o365: Option<O365Config>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LabelConfig {
+    pub priority_labels: HashSet<String>,
+    pub priority_timeframe: Option<String>
 }
 
 /// there is only one default "place" we will create tasks into
@@ -79,6 +90,7 @@ impl Default for AppConfig {
             debug: None,
             github_com: None,
             gitlab_com: None,
+            labels: LabelConfig { priority_labels: HashSet::new(), priority_timeframe: None },
             o365: None,
             colors: Colors {
                 issue_id: "magenta".to_string(),

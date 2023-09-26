@@ -3,9 +3,13 @@ colors:
   title: blue
   issue_id: red
 labels:
+  # if any issue has one of these labels, 
+  # they will be shown in this list
   priority_labels:
     - urgent
     - todo
+  # if a task has a deadline, it is considered priority, also
+  # if the due date is before this time (regardless of having urgent/todo label)
   priority_timeframe: 48hrs
 gitlab.com:
   token: glpat-foobar
