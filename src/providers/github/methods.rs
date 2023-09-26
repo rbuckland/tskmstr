@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use reqwest::{
     header::{HeaderMap, ACCEPT, AUTHORIZATION, USER_AGENT},
     Client,
@@ -5,8 +7,8 @@ use reqwest::{
 
 use crate::providers::common::model::Issue;
 use crate::providers::github::model::GitHubConfig;
-use crate::providers::{common::model::Label, github::model::GitHubIssue};
 use crate::providers::github::SHORT_CODE_GITHUB;
+use crate::providers::{common::model::Label, github::model::GitHubIssue};
 
 use serde_json::json;
 
@@ -115,3 +117,84 @@ pub async fn add_new_task_github(
     }
     Ok(())
 }
+
+use anyhow::{anyhow, Result};
+
+pub async fn add_labels_to_github_issue(
+    github_repo: &GitHubRepository,
+    github_config: &GitHubConfig,
+    issue_number: &String,
+    labels: &HashSet<String>,
+) -> Result<(), anyhow::Error> {
+    let client = Client::new();
+
+    // Create a URL for the GitHub API endpoint to add labels
+    let url = format!(
+        "https://api.github.com/repos/{}/{}/issues/{}/labels",
+        github_repo.owner, github_repo.repo, issue_number
+    );
+
+    // Prepare the list of labels to add as JSON
+    let labels_json: Vec<String> = labels.iter().cloned().collect();
+    let json_body = json!(&labels_json);
+
+    // Send a POST request to add labels
+    let response = client
+        .post(&url)
+        .headers(construct_github_header(&github_config.token))
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .json(&json_body)
+        .send()
+        .await?;
+
+    // Check the response status and handle errors
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        let error_msg = format!(
+            "Failed to add labels to GitHub issue: {:?}",
+            response.status()
+        );
+        Err(anyhow!(error_msg))
+    }
+}
+
+pub async fn remove_labels_from_github_issue(
+    github_repo: &GitHubRepository,
+    github_config: &GitHubConfig,
+    issue_number: &String,
+    labels: &HashSet<String>,
+) -> Result<(), anyhow::Error> {
+    let client = Client::new();
+
+    // Create a URL for the GitHub API endpoint to remove labels for a specific issue
+    let url = format!(
+        "https://api.github.com/repos/{}/{}/issues/{}/labels",
+        github_repo.owner, github_repo.repo, issue_number
+    );
+
+    // Iterate through the labels and send DELETE requests for each label
+    for label in labels {
+        let label_url = format!("{}/{}", url, label);
+
+        // Send a DELETE request for the specific label
+        let response = client
+            .delete(&label_url)
+            .headers(construct_github_header(&github_config.token))
+            .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+            .send()
+            .await?;
+
+        // Check the response status for each label and handle errors
+        if !response.status().is_success() {
+            let error_msg = format!(
+                "Failed to remove label '{}' from GitHub issue: {:?}",
+                label, response.status()
+            );
+            return Err(anyhow!(error_msg));
+        }
+    }
+
+    Ok(())
+}
+

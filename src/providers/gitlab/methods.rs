@@ -1,8 +1,10 @@
+use std::collections::HashSet;
+
 use crate::providers::common::model::Issue;
 use crate::providers::gitlab::model::GitLabConfig;
 use crate::providers::gitlab::model::GitLabIssue;
 use crate::providers::gitlab::SHORT_CODE_GITLAB;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use serde_json::json;
 
 use crate::providers::common::model::Label;
@@ -115,4 +117,80 @@ pub async fn add_new_task_gitlab(
         );
     }
     Ok(())
+}
+
+pub async fn add_labels_to_gitlab_issue(
+    gitlab_repo: &GitLabRepository,
+    gitlab_config: &GitLabConfig,
+    issue_id: &String, tags: &HashSet<String>
+) -> Result<(), anyhow::Error> {
+
+    let client = Client::new();
+
+    // Create a URL for the GitLab API endpoint to add labels
+    let url = format!(
+        "https://gitlab.com/api/v4/projects/{}/issues/{}/add_labels",
+        gitlab_repo.project_id,
+        issue_id
+    );
+
+    // Prepare the list of labels to add as JSON
+    let labels: Vec<&str> = tags.iter().map(|tag| tag.as_str()).collect();
+    let json_body = json!({
+        "labels": labels
+    });
+
+    // Send a POST request to add labels
+    let response = client
+        .post(&url)
+        .headers(construct_gitlab_header(&gitlab_config.token))
+        .header(reqwest::header::CONTENT_TYPE, "application/json")
+        .json(&json_body)
+        .send().await?;
+
+    // Check the response status and handle errors
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        let error_msg = format!("Failed to add labels to GitLab issue: {:?}", response.status());
+        Err(anyhow!(error_msg))
+    }
+}
+
+pub async fn remove_labels_from_gitlab_issue(
+    gitlab_repo: &GitLabRepository,
+    gitlab_config: &GitLabConfig,
+    issue_id: &String, tags: &HashSet<String>
+) -> Result<(), anyhow::Error> {
+
+    let client = Client::new();
+
+    // Create a URL for the GitLab API endpoint to add labels
+    let url = format!(
+        "https://gitlab.com/api/v4/projects/{}/issues/{}/remove_labels",
+        gitlab_repo.project_id,
+        issue_id
+    );
+
+    // Prepare the list of labels to add as JSON
+    let labels: Vec<&str> = tags.iter().map(|tag| tag.as_str()).collect();
+    let json_body = json!({
+        "labels": labels
+    });
+
+    // Send a POST request to add labels
+    let response = client
+        .post(&url)
+        .headers(construct_gitlab_header(&gitlab_config.token))
+        .header(reqwest::header::CONTENT_TYPE, "application/json")
+        .json(&json_body)
+        .send().await?;
+
+    // Check the response status and handle errors
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        let error_msg = format!("Failed to remove labels from GitLab issue: {:?}", response.status());
+        Err(anyhow!(error_msg))
+    }
 }

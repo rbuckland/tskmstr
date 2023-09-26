@@ -14,7 +14,7 @@ mod providers;
 use config::AppConfig;
 use control::*;
 use providers::common::model::TodoSource;
-use std::str::FromStr;
+use std::{str::FromStr, collections::HashSet};
 
 use output::aggregate_and_display_all_tasks;
 
@@ -45,10 +45,27 @@ impl FromStr for CloseCommand {
 }
 
 #[derive(StructOpt, Debug)]
+enum TagsCommand {
+    #[structopt(about = "Add more tags to the issue/task/item")]
+    Add(TagOperationParameters),
+
+    #[structopt(about = "Remove tags to the issue/task/item")]
+    Remove(TagOperationParameters),
+}
+
+#[derive(StructOpt, Debug)]
+struct TagOperationParameters {
+    #[structopt(help = "ID of the task to change Tags on")]
+    id: String,
+
+    #[structopt(help = "Tag names")]
+    tags: Vec<String>,
+}
+
+#[derive(StructOpt, Debug)]
 enum Command {
     #[structopt(about = "Add a new issue to the default repository")]
     Add {
-
         #[structopt()]
         title: String,
 
@@ -64,6 +81,9 @@ enum Command {
 
     #[structopt(about = "Close a task")]
     Close(CloseCommand),
+
+    #[structopt(about = "Make changes to the tags of issues")]
+    Tags(TagsCommand),
 }
 
 #[tokio::main]
@@ -92,6 +112,16 @@ async fn main() -> Result<(), anyhow::Error> {
         }) => add_new_task(&provider_and_id, &config, &title, &details, &tags).await?,
         Some(Command::Close(close_cmd)) => {
             close_task(TodoSource::from_str(&close_cmd.id)?, &config).await?;
+        }
+        Some(Command::Tags(TagsCommand::Add(tag_additions))) => {
+            let tag_set: &HashSet<String> = &tag_additions.tags.into_iter().collect();
+            let task_source = TodoSource::from_str(&tag_additions.id)?;
+            add_tags_to_task(&config, task_source, &tag_set).await?;
+        }
+        Some(Command::Tags(TagsCommand::Remove(tag_removals))) => {
+            let tag_set: &HashSet<String> = &tag_removals.tags.into_iter().collect();
+            let task_source = TodoSource::from_str(&tag_removals.id)?;
+            remove_tags_from_task(&config, task_source, &tag_set).await?;
         }
         None => aggregate_and_display_all_tasks(&config, &colors).await?,
     };

@@ -9,47 +9,6 @@ use std::str::FromStr;
 
 use std::collections::{HashMap, HashSet};
 
-// pub fn display_tasks_in_table(issues: &Vec<Issue>, colors: &Colors) -> Result<(), anyhow::Error> {
-//     // Group issues by tags
-//     let mut issues_by_tags: HashMap<String, Vec<Issue>> = HashMap::new();
-//     for issue in issues {
-//         for tag in &issue.tags {
-//             let tag_name = &tag.name;
-//             issues_by_tags
-//                 .entry(tag_name.to_string())
-//                 .or_insert_with(Vec::new)
-//                 .push(issue.clone());
-//         }
-//     }
-
-//     for (tag, tag_issues) in &issues_by_tags {
-//         println!("Tag: {}", tag.color(Color::from_str(&colors.tags).unwrap()));
-//         println!("{:-<40}", "-"); // Divider line
-
-//         for issue in tag_issues {
-//             let tags = format!(
-//                 "({})",
-//                 issue
-//                     .tags
-//                     .iter()
-//                     .map(|t| t.name.clone())
-//                     .collect::<Vec<String>>()
-//                     .join(", ")
-//             );
-//             println!(
-//                 " - {} {} {}",
-//                 issue.id.color(Color::from_str(&colors.issue_id).unwrap()),
-//                 issue.title.color(Color::from_str(&colors.title).unwrap()),
-//                 tags.color(Color::from_str(&colors.tags).unwrap())
-//             );
-//         }
-
-//         println!(); // Empty line between tags
-//     }
-
-//     Ok(())
-// }
-
 // Function to group tasks by labels, excluding priority labels
 fn group_tasks_by_labels(
     issues: &Vec<Issue>,
@@ -71,7 +30,11 @@ fn group_tasks_by_labels(
                 .map(|tag| tag.name.clone())
                 .collect();
 
-            let group_key = labels_except_priority.join(", ");
+            let group_key = if labels_except_priority.is_empty() {
+                "<no labels>".to_string()
+            } else {
+                labels_except_priority.join(", ")
+            };
 
             acc.entry(group_key)
                 .or_insert_with(Vec::new)
@@ -118,8 +81,15 @@ pub fn display_tasks_in_table(
     });
 
     // Display priority tasks
-    let priority_labels_str = &priority_labels.iter().cloned().collect::<Vec<String>>().join(", ");
-    println!("Priority: {}", priority_labels_str.color(Color::from_str(&colors.tags).unwrap()));            
+    let priority_labels_str = &priority_labels
+        .iter()
+        .cloned()
+        .collect::<Vec<String>>()
+        .join(", ");
+    println!(
+        "Priority: {}",
+        priority_labels_str.color(Color::from_str(&colors.tags).unwrap())
+    );
     println!("{:-<40}", "-"); // Divider line
     for issue in &priority_tasks {
         let tags = format!(
@@ -144,7 +114,10 @@ pub fn display_tasks_in_table(
     // Display grouped tasks
     for (group, group_issues) in groups {
         if !group.is_empty() {
-            println!("Tag: {}", group.color(Color::from_str(&colors.tags).unwrap()));            
+            println!(
+                "Tag: {}",
+                group.color(Color::from_str(&colors.tags).unwrap())
+            );
             println!("{:-<40}", "-"); // Divider line
             for issue in group_issues {
                 let tags = format!(
@@ -169,7 +142,6 @@ pub fn display_tasks_in_table(
 
     Ok(())
 }
-
 
 pub async fn aggregate_and_display_all_tasks(
     config: &AppConfig,
