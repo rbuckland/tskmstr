@@ -13,7 +13,7 @@ mod providers;
 
 use config::AppConfig;
 use control::*;
-use providers::common::model::TodoSource;
+use providers::common::{model::TodoSource};
 use std::{str::FromStr, collections::HashSet};
 
 use output::aggregate_and_display_all_tasks;
@@ -54,6 +54,12 @@ enum TagsCommand {
 }
 
 #[derive(StructOpt, Debug)]
+enum CredentialsCommand {
+    #[structopt(about = "List the Credentials in the OS Keyring (names only")]
+    List,
+}
+
+#[derive(StructOpt, Debug)]
 struct TagOperationParameters {
     #[structopt(help = "ID of the task to change Tags on")]
     id: String,
@@ -84,6 +90,11 @@ enum Command {
 
     #[structopt(about = "Make changes to the tags of issues")]
     Tags(TagsCommand),
+
+    #[structopt(about = "Add, List and Set the Credentials to use, from the OS keyring")]
+    Credentials(CredentialsCommand),
+    
+
 }
 
 #[tokio::main]
@@ -122,6 +133,10 @@ async fn main() -> Result<(), anyhow::Error> {
             let tag_set: &HashSet<String> = &tag_removals.tags.into_iter().collect();
             let task_source = TodoSource::from_str(&tag_removals.id)?;
             remove_tags_from_task(&config, task_source, &tag_set).await?;
+        }
+        Some(Command::Credentials(CredentialsCommand::List)) => { 
+            // list_credential_entries().await?;
+            unimplemented!("boo!")
         }
         None => aggregate_and_display_all_tasks(&config, &colors).await?,
     };
