@@ -5,7 +5,7 @@ use reqwest::{
     Client,
 };
 
-use crate::providers::common::model::Issue;
+use crate::providers::common::{model::Issue, credentials::HasSecretToken};
 use crate::providers::github::model::GitHubConfig;
 use crate::providers::github::SHORT_CODE_GITHUB;
 use crate::providers::{common::model::Label, github::model::GitHubIssue};
@@ -36,7 +36,7 @@ pub async fn collect_tasks_from_github(
 
         let response = client
             .get(&url)
-            .headers(construct_github_header(&github_config.token))
+            .headers(construct_github_header(&github_config.get_token()))
             .send()
             .await?;
 
@@ -96,7 +96,7 @@ pub async fn add_new_task_github(
 
     let response = client
         .post(&add_url)
-        .headers(construct_github_header(&github_config.token))
+        .headers(construct_github_header(&github_config.get_token()))
         .header(reqwest::header::CONTENT_TYPE, "application/json")
         .body(issue_details.to_string())
         .send()
@@ -141,7 +141,7 @@ pub async fn add_labels_to_github_issue(
     // Send a POST request to add labels
     let response = client
         .post(&url)
-        .headers(construct_github_header(&github_config.token))
+        .headers(construct_github_header(&github_config.get_token()))
         .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
         .json(&json_body)
         .send()
@@ -180,7 +180,7 @@ pub async fn remove_labels_from_github_issue(
         // Send a DELETE request for the specific label
         let response = client
             .delete(&label_url)
-            .headers(construct_github_header(&github_config.token))
+            .headers(construct_github_header(&github_config.get_token()))
             .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
             .send()
             .await?;
