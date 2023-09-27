@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::providers::common::credentials::HasSecretToken;
 use crate::providers::common::model::Issue;
 use crate::providers::gitlab::model::GitLabConfig;
 use crate::providers::gitlab::model::GitLabIssue;
@@ -29,13 +30,13 @@ pub async fn collect_tasks_from_gitlab(
 
     for (idx, repo) in gitlab_config.repositories.iter().enumerate() {
         let url = format!(
-            "https://gitlab.com/api/v4/projects/{}/issues",
+            "https://gitlab.com/api/v4/projects/{}/issues?state=opened",
             repo.project_id
         );
 
         let response = client
             .get(&url)
-            .header("PRIVATE-TOKEN", gitlab_config.token.as_str())
+            .header("PRIVATE-TOKEN", gitlab_config.get_token())
             .send()
             .await?;
 
@@ -97,7 +98,7 @@ pub async fn add_new_task_gitlab(
 
     let response = client
         .post(&add_url)
-        .headers(construct_gitlab_header(&gitlab_config.token))
+        .headers(construct_gitlab_header(&gitlab_config.get_token()))
         .header(reqwest::header::CONTENT_TYPE, "application/json")
         .json(&issue_details)
         .send()
@@ -143,7 +144,7 @@ pub async fn add_labels_to_gitlab_issue(
     // Send a POST request to add labels
     let response = client
         .post(&url)
-        .headers(construct_gitlab_header(&gitlab_config.token))
+        .headers(construct_gitlab_header(&gitlab_config.get_token()))
         .header(reqwest::header::CONTENT_TYPE, "application/json")
         .json(&json_body)
         .send().await?;
@@ -181,7 +182,7 @@ pub async fn remove_labels_from_gitlab_issue(
     // Send a POST request to add labels
     let response = client
         .post(&url)
-        .headers(construct_gitlab_header(&gitlab_config.token))
+        .headers(construct_gitlab_header(&gitlab_config.get_token()))
         .header(reqwest::header::CONTENT_TYPE, "application/json")
         .json(&json_body)
         .send().await?;
