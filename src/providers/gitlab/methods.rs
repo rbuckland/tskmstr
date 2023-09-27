@@ -30,7 +30,7 @@ pub async fn collect_tasks_from_gitlab(
 
     for (idx, repo) in gitlab_config.repositories.iter().enumerate() {
         let url = format!(
-            "https://gitlab.com/api/v4/projects/{}/issues",
+            "https://gitlab.com/api/v4/projects/{}/issues?state=opened",
             repo.project_id
         );
 
