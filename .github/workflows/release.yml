@@ -16,42 +16,43 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [x86_64-linux, aarch64-linux, aarch64-macos, x86_64-macos, x86_64-windows, aarch64-windows, x86_64-freebsd]
+       # build: [x86_64-linux, aarch64-linux, aarch64-macos, x86_64-macos, x86_64-windows, aarch64-windows, x86_64-freebsd]
+        build: [x86_64-linux]
         include:
         - build: x86_64-linux
           os: ubuntu-22.04
           rust: nightly
           target: x86_64-unknown-linux-gnu
-        - build: aarch64-linux
-          os: ubuntu-22.04
-          rust: nightly
-          target: aarch64-unknown-linux-gnu
-          cross: true
-        - build: x86_64-macos
-          os: macos-latest
-          rust: nightly
-          target: x86_64-apple-darwin
-          cross: false
-        - build: x86_64-windows
-          os: windows-2019
-          rust: nightly
-          target: x86_64-pc-windows-msvc
-          cross: false
-        - build: aarch64-windows
-          os: windows-2019
-          rust: nightly
-          target: aarch64-pc-windows-msvc
-          cross: true
-        - build: aarch64-macos
-          os: macos-latest
-          rust: nightly
-          cross: true
-          target: aarch64-apple-darwin
-        - build: x86_64-freebsd
-          os: ubuntu-22.04
-          rust: nightly
-          cross: true
-          target: x86_64-unknown-freebsd
+        # - build: aarch64-linux
+        #   os: ubuntu-22.04
+        #   rust: nightly
+        #   target: aarch64-unknown-linux-gnu
+        #   cross: true
+        # - build: x86_64-macos
+        #   os: macos-latest
+        #   rust: nightly
+        #   target: x86_64-apple-darwin
+        #   cross: false
+        # - build: x86_64-windows
+        #   os: windows-2019
+        #   rust: nightly
+        #   target: x86_64-pc-windows-msvc
+        #   cross: false
+        # - build: aarch64-windows
+        #   os: windows-2019
+        #   rust: nightly
+        #   target: aarch64-pc-windows-msvc
+        #   cross: true
+        # - build: aarch64-macos
+        #   os: macos-latest
+        #   rust: nightly
+        #   cross: true
+        #   target: aarch64-apple-darwin
+        # - build: x86_64-freebsd
+        #   os: ubuntu-22.04
+        #   rust: nightly
+        #   cross: true
+        #   target: x86_64-unknown-freebsd
     steps:
       - name: Checkout Source
         uses: actions/checkout@master
@@ -99,6 +100,7 @@ jobs:
           else
             cp "target/${{ matrix.target }}/release/$BIN_NAME" "dist/"
           fi
+          ls -al dist/
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
@@ -108,3 +110,15 @@ jobs:
           file_glob: true
           tag: $TAG
           overwrite: true 
+
+      # - name: Upload Release Asset
+      #   id: upload-release-asset 
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }} 
+      #     # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+      #     asset_path: ./my-artifact.zip
+      #     asset_name: my-artifact.zip
+      #     asset_content_type: application/zip          
