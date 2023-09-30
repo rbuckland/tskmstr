@@ -106,5 +106,5 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: dist/$BIN_NAME*
           file_glob: true
-          tag: ${{ TAG }}
+          tag: $TAG
           overwrite: true 
