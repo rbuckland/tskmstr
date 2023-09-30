@@ -144,18 +144,19 @@ pub fn display_tasks_in_table(
 }
 
 pub async fn aggregate_and_display_all_tasks(
+    provider_id: &Option<String>,
     config: &AppConfig,
     colors: &Colors,
 ) -> Result<(), anyhow::Error> {
     let mut all_issues = Vec::new();
 
     if let Some(github_config) = &config.github_com {
-        let github_tasks = collect_tasks_from_github(github_config).await?;
+        let github_tasks = collect_tasks_from_github(github_config, &provider_id).await?;
         all_issues.extend(github_tasks);
     }
 
     if let Some(gitlab_config) = &config.gitlab_com {
-        let gitlab_tasks = collect_tasks_from_gitlab(gitlab_config).await?;
+        let gitlab_tasks = collect_tasks_from_gitlab(gitlab_config, &provider_id).await?;
         all_issues.extend(gitlab_tasks);
     }
 
