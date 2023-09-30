@@ -106,7 +106,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/$BIN_NAME*
+          file: dist/*
           file_glob: true
           tag: $TAG
           overwrite: true 
