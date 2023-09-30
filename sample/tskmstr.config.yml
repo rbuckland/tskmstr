@@ -25,5 +25,3 @@ gitlab.com:
     - id: 🄿
       color: green    
       project_id: someorg%2Fmy-tasks
-      defaults:
-        for_new_tasks: true
