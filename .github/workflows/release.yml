@@ -94,18 +94,25 @@ jobs:
           command: build
           args: --release --locked --target ${{ matrix.target }}
 
-      - name: Strip release binary (linux and macos)
-        if: matrix.build == 'x86_64-linux' || matrix.build == 'x86_64-macos'
-        run: strip "target/${{ matrix.target }}/release/${{ matrix.artifact_name }}"
+      - name: Strip the binary
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.cross }}
+          command: strip
+          args: --target ${{ matrix.target }}
 
-      - name: Strip release binary (arm linux)
-        if: matrix.build == 'aarch64-linux'
-        run: |
-          docker run --rm -v \
-            "$PWD/target:/target:Z" \
-            rustembedded/cross:${{ matrix.target }} \
-            aarch64-linux-gnu-strip \
-            /target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+      # - name: Strip release binary (linux and macos)
+      #   if: matrix.build == 'x86_64-linux' || matrix.build == 'x86_64-macos'
+      #   run: strip "target/${{ matrix.target }}/release/${{ matrix.artifact_name }}"
+
+      # - name: Strip release binary (arm linux)
+      #   if: matrix.build == 'aarch64-linux'
+      #   run: |
+      #     docker run --rm -v \
+      #       "$PWD/target:/target:Z" \
+      #       rustembedded/cross:${{ matrix.target }} \
+      #       aarch64-linux-gnu-strip \
+      #       /target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
