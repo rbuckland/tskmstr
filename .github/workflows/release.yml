@@ -5,7 +5,6 @@ on:
       - v*
 
 env:
-  BIN_NAME: t
   PROJECT_NAME: tskmstr
   REPO_NAME: rbuckland/tskmstr
   
@@ -16,43 +15,61 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-       # build: [x86_64-linux, aarch64-linux, aarch64-macos, x86_64-macos, x86_64-windows, aarch64-windows, x86_64-freebsd]
+        build: [x86_64-linux, aarch64-linux, aarch64-macos, x86_64-macos, x86_64-windows, aarch64-windows, x86_64-freebsd]
         build: [x86_64-linux]
         include:
+
         - build: x86_64-linux
           os: ubuntu-22.04
           rust: nightly
           target: x86_64-unknown-linux-gnu
-        # - build: aarch64-linux
-        #   os: ubuntu-22.04
-        #   rust: nightly
-        #   target: aarch64-unknown-linux-gnu
-        #   cross: true
-        # - build: x86_64-macos
-        #   os: macos-latest
-        #   rust: nightly
-        #   target: x86_64-apple-darwin
-        #   cross: false
-        # - build: x86_64-windows
-        #   os: windows-2019
-        #   rust: nightly
-        #   target: x86_64-pc-windows-msvc
-        #   cross: false
-        # - build: aarch64-windows
-        #   os: windows-2019
-        #   rust: nightly
-        #   target: aarch64-pc-windows-msvc
-        #   cross: true
-        # - build: aarch64-macos
-        #   os: macos-latest
-        #   rust: nightly
-        #   cross: true
-        #   target: aarch64-apple-darwin
-        # - build: x86_64-freebsd
-        #   os: ubuntu-22.04
-        #   rust: nightly
-        #   cross: true
-        #   target: x86_64-unknown-freebsd
+          artifact_name: tskmstr
+          asset_name: tskmstr-linux-amd64          
+        - build: aarch64-linux
+          os: ubuntu-22.04
+          rust: nightly
+          target: aarch64-unknown-linux-gnu
+          cross: true
+          artifact_name: tskmstr
+          asset_name: tskmstr-linux-aarch64
+
+        - build: x86_64-macos
+          os: macos-latest
+          rust: nightly
+          target: x86_64-apple-darwin
+          cross: false
+          artifact_name: tskmstr
+          asset_name: tskmstr-osx-amd64
+        - build: aarch64-macos
+          os: macos-latest
+          rust: nightly
+          cross: true
+          target: aarch64-apple-darwin
+          artifact_name: tskmstr
+          asset_name: tskmstr-osx-aarch64          
+
+        - build: x86_64-windows
+          os: windows-2019
+          rust: nightly
+          target: x86_64-pc-windows-msvc
+          cross: false
+          artifact_name: tskmstr.exe
+          asset_name: tskmstr-windows-amd64
+        - build: aarch64-windows
+          os: windows-2019
+          rust: nightly
+          target: aarch64-pc-windows-msvc
+          cross: true
+          artifact_name: tskmstr.exe
+          asset_name: tskmstr-windows-aarch64
+
+        - build: x86_64-freebsd
+          os: ubuntu-22.04
+          rust: nightly
+          cross: true
+          target: x86_64-unknown-freebsd
+          artifact_name: tskmstr
+          asset_name: tskmstr-freebsd-amd64
     steps:
       - name: Checkout Source
         uses: actions/checkout@master
@@ -80,7 +97,7 @@ jobs:
 
       - name: Strip release binary (linux and macos)
         if: matrix.build == 'x86_64-linux' || matrix.build == 'x86_64-macos'
-        run: strip "target/${{ matrix.target }}/release/$BIN_NAME"
+        run: strip "target/${{ matrix.target }}/release/${{ matrix.artifact_name }}"
 
       - name: Strip release binary (arm)
         if: matrix.build == 'aarch64-linux'
@@ -89,33 +106,13 @@ jobs:
             "$PWD/target:/target:Z" \
             rustembedded/cross:${{ matrix.target }} \
             aarch64-linux-gnu-strip \
-            /target/${{ matrix.target }}/release/$BIN_NAME
-
-      - name: Copy file to dist
-        shell: bash
-        run: |
-          mkdir -p dist 2> /dev/null
-          if [ "${{ matrix.os }}" = "windows-2019" ]; then
-            cp "target/${{ matrix.target }}/release/$BIN_NAME.exe" "dist/"
-          else
-            cp "target/${{ matrix.target }}/release/$BIN_NAME" "dist/"
-          fi
-          ls -al dist/
-
-      - name: Calculate tag name
-        run: |
-          tagname=dev
-          if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            tagname=${GITHUB_REF:10}
-          fi
-          echo TAG=$tagname >> $GITHUB_ENV       
-        id: tagname
+            /target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/*
-          file_glob: true
-          tag: $TAG
+          file: target/release/${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
           overwrite: true 
