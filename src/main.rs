@@ -6,7 +6,7 @@ use anyhow::Result;
 use log::{debug, error, info, warn};
 
 use serde_yaml;
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 
 use tokio;
 mod config;
@@ -16,7 +16,6 @@ mod providers;
 
 use config::AppConfig;
 use control::*;
-use providers::common::{model::TaskIssueProviderConfig};
 use std::{str::FromStr, collections::HashSet, path::PathBuf};
 
 use output::{aggregate_and_display_all_tasks, list_providers};
@@ -135,17 +134,15 @@ async fn main() -> Result<(), anyhow::Error> {
             tags,
         }) => add_new_task(&args.provider_id, &config, &title, &details, &tags).await?,
         Some(Command::Close(close_cmd)) => {
-            close_task(TaskIssueProviderConfig::from_str(&close_cmd.id)?, &config).await?;
+            close_task( &config, close_cmd.id.clone()).await?;
         }
         Some(Command::Tags(TagsCommand::Add(tag_additions))) => {
             let tag_set: &HashSet<String> = &tag_additions.tags.into_iter().collect();
-            let task_source = TaskIssueProviderConfig::from_str(&tag_additions.id)?;
-            add_tags_to_task(&config, task_source, &tag_set).await?;
+            add_tags_to_task(&config, tag_additions.id.clone(), &tag_set).await?;
         }
         Some(Command::Tags(TagsCommand::Remove(tag_removals))) => {
             let tag_set: &HashSet<String> = &tag_removals.tags.into_iter().collect();
-            let task_source = TaskIssueProviderConfig::from_str(&tag_removals.id)?;
-            remove_tags_from_task(&config, task_source, &tag_set).await?;
+            remove_tags_from_task(&config, tag_removals.id.clone(), &tag_set).await?;
         }
         Some(Command::Providers) => {
             list_providers(&config).await?;

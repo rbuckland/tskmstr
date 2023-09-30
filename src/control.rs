@@ -2,11 +2,10 @@ use anyhow::Result;
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
 use std::collections::HashSet;
-use std::str::FromStr;
+
 
 use crate::config::{AppConfig, TaskIssueProvider};
 use crate::providers::common::credentials::HasSecretToken;
-use crate::providers::common::model::TaskIssueProviderConfig;
 use crate::providers::github::methods::{
     add_labels_to_github_issue, add_new_task_github, construct_github_header,
     remove_labels_from_github_issue,
@@ -15,6 +14,7 @@ use crate::providers::gitlab::methods::{
     add_labels_to_gitlab_issue, add_new_task_gitlab, construct_gitlab_header,
     remove_labels_from_gitlab_issue,
 };
+
 use crate::providers::o365::methods::add_new_task_o365;
 
 use reqwest::Client;
@@ -74,19 +74,14 @@ pub async fn add_new_task(
 
 pub async fn remove_tags_from_task(
     app_config: &AppConfig,
-    source: TaskIssueProviderConfig,
+    provider_and_issue: String,
     tags: &HashSet<String>,
 ) -> Result<(), anyhow::Error> {
-    let issue_id = match &source {
-        TaskIssueProviderConfig::GitHub(_, id) => id.clone().unwrap(),
-        TaskIssueProviderConfig::GitLab(_, id) => id.clone().unwrap(),
-        _ => unimplemented!(
-            "Removing tags from an issue for {} is not supported yet",
-            &source
-        ),
-    };
-
-    let repository = &source.clone().task_supplier(&app_config);
+   
+    let details: Vec<&str> = provider_and_issue.split('/').collect();
+    let provider_id = details.get(0).unwrap_or_else(||panic!("Provider ID was invalid"));
+    let issue_id = details.get(1).unwrap_or_else(||panic!("Issue ID was invalid")).to_string();
+    let repository = &app_config.find_provider_by_id(&provider_id)?.unwrap_or_else(||panic!("Provider was not found"));
 
     match repository {
         TaskIssueProvider::GitHub(repo_config) => {
@@ -109,7 +104,7 @@ pub async fn remove_tags_from_task(
         }
         _ => unimplemented!(
             "Adding tags to an issue for {} is not supported yet",
-            &source.clone()
+            &provider_and_issue.clone()
         ),
     }
 
@@ -118,19 +113,13 @@ pub async fn remove_tags_from_task(
 
 pub async fn add_tags_to_task(
     app_config: &AppConfig,
-    source: TaskIssueProviderConfig,
+    provider_and_issue: String,
     tags: &HashSet<String>,
 ) -> Result<(), anyhow::Error> {
-    let issue_id = match &source {
-        TaskIssueProviderConfig::GitHub(_, id) => id.clone().unwrap(),
-        TaskIssueProviderConfig::GitLab(_, id) => id.clone().unwrap(),
-        _ => unimplemented!(
-            "Adding tags to an issue for {} is not supported yet",
-            &source
-        ),
-    };
-
-    let repository = &source.clone().task_supplier(&app_config);
+    let details: Vec<&str> = provider_and_issue.split('/').collect();
+    let provider_id = details.get(0).unwrap_or_else(||panic!("Provider ID was invalid"));
+    let issue_id = details.get(1).unwrap_or_else(||panic!("Issue ID was invalid")).to_string();
+    let repository = &app_config.find_provider_by_id(&provider_id)?.unwrap_or_else(||panic!("Provider was not found"));
 
     match repository {
         TaskIssueProvider::GitHub(repo_config) => {
@@ -153,23 +142,21 @@ pub async fn add_tags_to_task(
         }
         _ => unimplemented!(
             "Adding tags to an issue for {} is not supported yet",
-            &source.clone()
+            &provider_and_issue.clone()
         ),
     }
 
     Ok(())
 }
 
-pub async fn close_task(source: TaskIssueProviderConfig, app_config: &AppConfig) -> Result<()> {
+pub async fn close_task( app_config: &AppConfig,
+    provider_and_issue: String) -> Result<()> {
     let client = Client::new();
 
-    let issue_id = match &source {
-        TaskIssueProviderConfig::GitHub(_, id) => id.clone().unwrap(),
-        TaskIssueProviderConfig::GitLab(_, id) => id.clone().unwrap(),
-        _ => unimplemented!("closing a task for {} is not supported yet", &source),
-    };
-
-    let repository = source.task_supplier(&app_config);
+    let details: Vec<&str> = provider_and_issue.split('/').collect();
+    let provider_id = details.get(0).unwrap_or_else(||panic!("Provider ID was invalid"));
+    let issue_id = details.get(1).unwrap_or_else(||panic!("Issue ID was invalid")).to_string();
+    let repository = &app_config.find_provider_by_id(&provider_id)?.unwrap_or_else(||panic!("Provider was not found"));
 
     match repository {
         TaskIssueProvider::GitHub(repo_config) => {
@@ -235,7 +222,7 @@ pub async fn close_task(source: TaskIssueProviderConfig, app_config: &AppConfig)
                 );
             }
         }
-        TaskIssueProvider::O365(todolist_config) => {
+        TaskIssueProvider::O365(_todolist_config) => {
             unimplemented!("o365 close not yet")
         }
     }
