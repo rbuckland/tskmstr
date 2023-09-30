@@ -1,6 +1,11 @@
 use serde::Deserialize;
+use colored::Color;
+use std::str::FromStr;
 
-use crate::providers::common::credentials::{HasSecretToken, CredentialKeyringEntry};
+use crate::{
+    config::{Defaults, ProviderIface},
+    providers::common::credentials::{CredentialKeyringEntry, HasSecretToken},
+};
 
 // New type for GitLab labels
 #[derive(Debug, Deserialize, Clone)]
@@ -25,7 +30,7 @@ pub struct GitLabConfig {
 
 impl HasSecretToken for GitLabConfig {
     fn task_provider_id(&self) -> String {
-       "gitlab.com".to_string()
+        "gitlab.com".to_string()
     }
 
     fn token(&self) -> Option<String> {
@@ -37,9 +42,34 @@ impl HasSecretToken for GitLabConfig {
     }
 }
 
-
 #[derive(Debug, Deserialize, Clone)]
 pub struct GitLabRepository {
+    /// a unique character across the entire repository config
+    /// which will be used for display and CMD line choices
+    /// If an ID is not set, an auto generated one will be created
+    pub id: String,
+
+    /// In output, Where color is appropriate, together with the ID, this will be used
+    pub color: String,
+
+    /// the gitlab project ID, this is either the "number", or
+    /// the string. If the gitlab project is a subgroup, it will look like parent%2Fchild
     pub project_id: String,
-    pub default: Option<bool>,
+
+    /// Defauls configuration
+    pub defaults: Option<Defaults>,
+}
+
+impl ProviderIface for GitLabRepository {
+    fn defaults(&self) -> Option<Defaults> {
+        self.defaults.clone()
+    }
+
+    fn color(&self) -> Color {
+        Color::from_str(&self.color).unwrap()
+    }
+
+    fn id(&self) -> String {
+        self.id.clone()
+    }
 }
