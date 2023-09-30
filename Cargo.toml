@@ -3,6 +3,12 @@ name = "tskmstr"
 version = "0.5.1"
 edition = "2021"
 
+[toolchain]
+# we are using nicer Fn features
+#![feature(fn_traits)] Fn
+#![feature(unboxed_closures)] (no Box<Fn....>
+channel = "nightly"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
