@@ -1,4 +1,4 @@
-use crate::config::{Colors, ProviderIface};
+use crate::config::Colors;
 use crate::providers::github::methods::collect_tasks_from_github;
 
 use crate::providers::gitlab::methods::collect_tasks_from_gitlab;
@@ -165,19 +165,16 @@ pub async fn aggregate_and_display_all_tasks(
     Ok(())
 }
 
-pub async fn list_providers(
-    config: &AppConfig,
-) -> Result<(), anyhow::Error> {
-
+pub async fn list_providers(config: &AppConfig) -> Result<(), anyhow::Error> {
     if let Some(github_config) = &config.github_com {
         for x in &github_config.repositories {
-            println!("{} - github.com/{}/{}",x.id,x.owner,x.repo);
+            println!("{} - github.com/{}/{}", x.id, x.owner, x.repo);
         }
     }
 
     if let Some(gitlab_config) = &config.gitlab_com {
         for x in &gitlab_config.repositories {
-            println!("{} - gitlab.com/{}",x.id,x.project_id);
+            println!("{} - gitlab.com/{}", x.id, x.project_id);
         }
     }
 
