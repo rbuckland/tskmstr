@@ -5,9 +5,8 @@ use reqwest::{
     Client,
 };
 
-use crate::providers::common::{model::Issue, credentials::HasSecretToken};
+use crate::providers::common::{credentials::HasSecretToken, model::Issue};
 use crate::providers::github::model::GitHubConfig;
-use crate::providers::github::SHORT_CODE_GITHUB;
 use crate::providers::{common::model::Label, github::model::GitHubIssue};
 
 use serde_json::json;
@@ -24,11 +23,17 @@ pub fn construct_github_header(token: &str) -> HeaderMap {
 
 pub async fn collect_tasks_from_github(
     github_config: &GitHubConfig,
+    provider_id: &Option<String>,
 ) -> Result<Vec<Issue>, anyhow::Error> {
     let client = Client::new();
     let mut all_issues = Vec::new(); // Create a vector to collect all issues
 
-    for (idx, repo) in github_config.repositories.iter().enumerate() {
+    for (idx, repo) in github_config
+        .repositories
+        .iter()
+        .filter(|&r| provider_id.is_none() || provider_id.as_deref().is_some_and(|p| r.id == p))
+        .enumerate()
+    {
         let url = format!(
             "https://api.github.com/repos/{}/{}/issues",
             repo.owner, repo.repo
@@ -45,7 +50,7 @@ pub async fn collect_tasks_from_github(
 
             let github_issues: Vec<GitHubIssue> = serde_json::from_str(&body)?;
             let issues = github_issues.into_iter().map(|github_issue| Issue {
-                id: format!("{}{}/{}", SHORT_CODE_GITHUB, idx, github_issue.number),
+                id: format!("{}/{}", repo.id, github_issue.number),
                 title: github_issue.title,
                 html_url: github_issue.html_url,
                 tags: github_issue
@@ -189,7 +194,8 @@ pub async fn remove_labels_from_github_issue(
         if !response.status().is_success() {
             let error_msg = format!(
                 "Failed to remove label '{}' from GitHub issue: {:?}",
-                label, response.status()
+                label,
+                response.status()
             );
             return Err(anyhow!(error_msg));
         }
@@ -197,4 +203,3 @@ pub async fn remove_labels_from_github_issue(
 
     Ok(())
 }
-

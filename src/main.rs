@@ -1,10 +1,14 @@
+#![feature(fn_traits)]
+#![feature(unboxed_closures)]
+
 use anyhow::Result;
 use expanduser::expanduser;
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
 
 use serde_yaml;
-use structopt::StructOpt;
+use clap::{Args, Parser, Subcommand};
+
 use tokio;
 mod config;
 mod control;
@@ -13,26 +17,60 @@ mod providers;
 
 use config::AppConfig;
 use control::*;
-use providers::common::{model::TodoSource};
+use providers::common::{model::TaskIssueProviderConfig};
 use std::{str::FromStr, collections::HashSet};
 
-use output::aggregate_and_display_all_tasks;
+use output::{aggregate_and_display_all_tasks, list_providers};
 
-#[derive(StructOpt, Debug)]
-struct Args {
-    #[structopt(short, long)]
+
+#[derive(Debug, Parser)] // requires `derive` feature
+#[command(name = "t")]
+#[command(about = "tskmstr: A Task & Issue Management CLI", long_about = None)]
+struct Cli {
+    #[arg(short, long)]
     debug: bool,
 
-    #[structopt(short, long, default_value = "~/.config/tskmstr/tskmstr.config.yml")]
+    #[arg(short, long, default_value = "~/.config/tskmstr/tskmstr.config.yml")]
     config: String,
 
-    #[structopt(subcommand)]
+    /// Limit the activity to one task/issue provider
+    #[arg(short, long)]
+    provider_id: Option<String>,
+
+    #[command(subcommand)]
+    // optional because, default execution with no args will list all tasks/issues
     cmd: Option<Command>,
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// Add a new issue to the default repository
+    Add {
+        /// The title of your task/issue
+        title: String,
+
+        /// Details of the issue
+        details: String,
+
+        /// Tags/Labels to apply to the issue/task
+        tags: Option<Vec<String>>,
+    },
+
+    /// Close a task
+    Close(CloseCommand),
+
+    /// Add and remove tags/labels of issues/tasks
+    #[command(subcommand)]
+    Tags(TagsCommand),
+
+    /// List Providers
+    Providers,
+
+}
+
+#[derive(Debug, clap::Args)]
 struct CloseCommand {
-    #[structopt(help = "ID of the task to close")]
+    #[arg(help = "ID of the task to close")]
     id: String,
 }
 
@@ -44,62 +82,30 @@ impl FromStr for CloseCommand {
     }
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 enum TagsCommand {
-    #[structopt(about = "Add more tags to the issue/task/item")]
+
+    /// Add more tags to the issue/task/item
     Add(TagOperationParameters),
 
-    #[structopt(about = "Remove tags to the issue/task/item")]
-    Remove(TagOperationParameters),
+    /// Remove tags to the issue/task/item
+    Remove(TagOperationParameters)
 }
 
-#[derive(StructOpt, Debug)]
-enum CredentialsCommand {
-    #[structopt(about = "List the Credentials in the OS Keyring (names only")]
-    List,
-}
 
-#[derive(StructOpt, Debug)]
+#[derive(clap::Args, Debug)]
 struct TagOperationParameters {
-    #[structopt(help = "ID of the task to change Tags on")]
+
+    /// ID of the task (must be prefixed with the provider id e.g. P-888, or J-ID-999)
     id: String,
 
-    #[structopt(help = "Tag names")]
+    // Tag/Label names
     tags: Vec<String>,
-}
-
-#[derive(StructOpt, Debug)]
-enum Command {
-    #[structopt(about = "Add a new issue to the default repository")]
-    Add {
-        #[structopt()]
-        title: String,
-
-        #[structopt()]
-        details: String,
-
-        #[structopt()]
-        provider_and_id: Option<String>,
-
-        #[structopt(short, long)]
-        tags: Option<Vec<String>>,
-    },
-
-    #[structopt(about = "Close a task")]
-    Close(CloseCommand),
-
-    #[structopt(about = "Make changes to the tags of issues")]
-    Tags(TagsCommand),
-
-    #[structopt(about = "Add, List and Set the Credentials to use, from the OS keyring")]
-    Credentials(CredentialsCommand),
-    
-
 }
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    let args = Args::from_args();
+    let args = Cli::parse();
     // Read the repository configuration from YAML
     let config_file = std::fs::read_to_string(expanduser(&args.config)?)?;
     let config: AppConfig = serde_yaml::from_str(&config_file)?;
@@ -118,27 +124,25 @@ async fn main() -> Result<(), anyhow::Error> {
         Some(Command::Add {
             title,
             details,
-            provider_and_id,
             tags,
-        }) => add_new_task(&provider_and_id, &config, &title, &details, &tags).await?,
+        }) => add_new_task(&args.provider_id, &config, &title, &details, &tags).await?,
         Some(Command::Close(close_cmd)) => {
-            close_task(TodoSource::from_str(&close_cmd.id)?, &config).await?;
+            close_task(TaskIssueProviderConfig::from_str(&close_cmd.id)?, &config).await?;
         }
         Some(Command::Tags(TagsCommand::Add(tag_additions))) => {
             let tag_set: &HashSet<String> = &tag_additions.tags.into_iter().collect();
-            let task_source = TodoSource::from_str(&tag_additions.id)?;
+            let task_source = TaskIssueProviderConfig::from_str(&tag_additions.id)?;
             add_tags_to_task(&config, task_source, &tag_set).await?;
         }
         Some(Command::Tags(TagsCommand::Remove(tag_removals))) => {
             let tag_set: &HashSet<String> = &tag_removals.tags.into_iter().collect();
-            let task_source = TodoSource::from_str(&tag_removals.id)?;
+            let task_source = TaskIssueProviderConfig::from_str(&tag_removals.id)?;
             remove_tags_from_task(&config, task_source, &tag_set).await?;
         }
-        Some(Command::Credentials(CredentialsCommand::List)) => { 
-            // list_credential_entries().await?;
-            unimplemented!("boo!")
+        Some(Command::Providers) => {
+            list_providers(&config).await?;
         }
-        None => aggregate_and_display_all_tasks(&config, &colors).await?,
+        None => aggregate_and_display_all_tasks(&args.provider_id, &config, &colors).await?,
     };
 
     Ok(())

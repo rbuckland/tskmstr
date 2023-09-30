@@ -4,47 +4,46 @@ use log::{debug, error, info, warn};
 use std::collections::HashSet;
 use std::str::FromStr;
 
-use crate::config::{AppConfig, TodoSupplier};
+use crate::config::{AppConfig, TaskIssueProvider};
 use crate::providers::common::credentials::HasSecretToken;
-use crate::providers::common::model::TodoSource;
+use crate::providers::common::model::TaskIssueProviderConfig;
 use crate::providers::github::methods::{
     add_labels_to_github_issue, add_new_task_github, construct_github_header,
     remove_labels_from_github_issue,
 };
-use crate::providers::github::SHORT_CODE_GITHUB;
 use crate::providers::gitlab::methods::{
     add_labels_to_gitlab_issue, add_new_task_gitlab, construct_gitlab_header,
     remove_labels_from_gitlab_issue,
 };
-use crate::providers::gitlab::SHORT_CODE_GITLAB;
 use crate::providers::o365::methods::add_new_task_o365;
-use crate::providers::o365::SHORT_CODE_O365;
 
 use reqwest::Client;
+
+const ERRMSG_DEFAULT_PROVIDER: &str = "No default provider was found. Ensure you have {defaults.for_newtasks: true} for your chosen provider";
 
 /// add a new task is either
 /// add a new task to the default todo provider
 /// or, a provider_id is supplied (gl3, o365_2)
 /// and that is used to locate the correct provider.
 pub async fn add_new_task(
-    provider_and_id: &Option<String>,
+    provider_id: &Option<String>,
     config: &AppConfig,
     title: &str,
     details: &str,
     tags: &Option<Vec<String>>,
 ) -> Result<(), anyhow::Error> {
     debug!("creating new task {} {:?}", &title, &tags);
+    debug!("default provider is {:?}", &config.find_default_provider());
 
-    let x = match provider_and_id {
-        None => config.default_todo_source().expect("failed").unwrap(),
-        Some(p_and_id) => TodoSource::from_str(&p_and_id)
-            .expect("the todo provider id was invalid")
-            .task_supplier(&config),
+    let x = match provider_id {
+        None => config.find_default_provider().expect(ERRMSG_DEFAULT_PROVIDER).unwrap_or_else(||panic!("{}",ERRMSG_DEFAULT_PROVIDER)),
+        Some(provider) => config.find_provider_for_issue(provider)
+            .expect("The todo provider id was invalid").unwrap()
     };
 
     // Add the logic to call the appropriate add_new_task function based on the provider
     match x {
-        TodoSupplier::GitHub(repo) => {
+        TaskIssueProvider::GitHub(repo) => {
             add_new_task_github(
                 &repo,
                 &config.github_com.as_ref().unwrap(),
@@ -54,7 +53,7 @@ pub async fn add_new_task(
             )
             .await?
         }
-        TodoSupplier::GitLab(repo) => {
+        TaskIssueProvider::GitLab(repo) => {
             add_new_task_gitlab(
                 &repo,
                 &config.gitlab_com.as_ref().unwrap(),
@@ -64,7 +63,7 @@ pub async fn add_new_task(
             )
             .await?
         }
-        TodoSupplier::O365(repo) => {
+        TaskIssueProvider::O365(repo) => {
             add_new_task_o365(&repo, &config.o365.as_ref().unwrap(), &title, details, tags).await?
         }
         _ => return Err(anyhow::anyhow!("Unsupported provider")),
@@ -75,12 +74,12 @@ pub async fn add_new_task(
 
 pub async fn remove_tags_from_task(
     app_config: &AppConfig,
-    source: TodoSource,
+    source: TaskIssueProviderConfig,
     tags: &HashSet<String>,
 ) -> Result<(), anyhow::Error> {
     let issue_id = match &source {
-        TodoSource::GitHub(_, id) => id.clone().unwrap(),
-        TodoSource::GitLab(_, id) => id.clone().unwrap(),
+        TaskIssueProviderConfig::GitHub(_, id) => id.clone().unwrap(),
+        TaskIssueProviderConfig::GitLab(_, id) => id.clone().unwrap(),
         _ => unimplemented!(
             "Removing tags from an issue for {} is not supported yet",
             &source
@@ -90,7 +89,7 @@ pub async fn remove_tags_from_task(
     let repository = &source.clone().task_supplier(&app_config);
 
     match repository {
-        TodoSupplier::GitHub(repo_config) => {
+        TaskIssueProvider::GitHub(repo_config) => {
             remove_labels_from_github_issue(
                 &repo_config,
                 &app_config.github_com.as_ref().unwrap(),
@@ -99,7 +98,7 @@ pub async fn remove_tags_from_task(
             )
             .await?
         }
-        TodoSupplier::GitLab(repo_config) => {
+        TaskIssueProvider::GitLab(repo_config) => {
             remove_labels_from_gitlab_issue(
                 &repo_config,
                 &app_config.gitlab_com.as_ref().unwrap(),
@@ -119,12 +118,12 @@ pub async fn remove_tags_from_task(
 
 pub async fn add_tags_to_task(
     app_config: &AppConfig,
-    source: TodoSource,
+    source: TaskIssueProviderConfig,
     tags: &HashSet<String>,
 ) -> Result<(), anyhow::Error> {
     let issue_id = match &source {
-        TodoSource::GitHub(_, id) => id.clone().unwrap(),
-        TodoSource::GitLab(_, id) => id.clone().unwrap(),
+        TaskIssueProviderConfig::GitHub(_, id) => id.clone().unwrap(),
+        TaskIssueProviderConfig::GitLab(_, id) => id.clone().unwrap(),
         _ => unimplemented!(
             "Adding tags to an issue for {} is not supported yet",
             &source
@@ -134,7 +133,7 @@ pub async fn add_tags_to_task(
     let repository = &source.clone().task_supplier(&app_config);
 
     match repository {
-        TodoSupplier::GitHub(repo_config) => {
+        TaskIssueProvider::GitHub(repo_config) => {
             add_labels_to_github_issue(
                 &repo_config,
                 &app_config.github_com.as_ref().unwrap(),
@@ -143,7 +142,7 @@ pub async fn add_tags_to_task(
             )
             .await?
         }
-        TodoSupplier::GitLab(repo_config) => {
+        TaskIssueProvider::GitLab(repo_config) => {
             add_labels_to_gitlab_issue(
                 &repo_config,
                 &app_config.gitlab_com.as_ref().unwrap(),
@@ -161,19 +160,19 @@ pub async fn add_tags_to_task(
     Ok(())
 }
 
-pub async fn close_task(source: TodoSource, app_config: &AppConfig) -> Result<()> {
+pub async fn close_task(source: TaskIssueProviderConfig, app_config: &AppConfig) -> Result<()> {
     let client = Client::new();
 
     let issue_id = match &source {
-        TodoSource::GitHub(_, id) => id.clone().unwrap(),
-        TodoSource::GitLab(_, id) => id.clone().unwrap(),
+        TaskIssueProviderConfig::GitHub(_, id) => id.clone().unwrap(),
+        TaskIssueProviderConfig::GitLab(_, id) => id.clone().unwrap(),
         _ => unimplemented!("closing a task for {} is not supported yet", &source),
     };
 
     let repository = source.task_supplier(&app_config);
 
     match repository {
-        TodoSupplier::GitHub(repo_config) => {
+        TaskIssueProvider::GitHub(repo_config) => {
             let url = format!(
                 "https://api.github.com/repos/{}/{}/issues/{}",
                 repo_config.owner, repo_config.repo, &issue_id
@@ -207,7 +206,7 @@ pub async fn close_task(source: TodoSource, app_config: &AppConfig) -> Result<()
             }
         }
 
-        TodoSupplier::GitLab(repo_config) => {
+        TaskIssueProvider::GitLab(repo_config) => {
             let url = format!(
                 "https://gitlab.com/api/v4/projects/{}/issues/{}?state_event=close",
                 repo_config.project_id, &issue_id
@@ -236,7 +235,7 @@ pub async fn close_task(source: TodoSource, app_config: &AppConfig) -> Result<()
                 );
             }
         }
-        TodoSupplier::O365(todolist_config) => {
+        TaskIssueProvider::O365(todolist_config) => {
             unimplemented!("o365 close not yet")
         }
     }
