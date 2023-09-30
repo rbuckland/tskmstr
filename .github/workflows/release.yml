@@ -102,12 +102,12 @@ jobs:
 
       - name: Calculate tag name
         run: |
-          name=dev
+          tagname=dev
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            name=${GITHUB_REF:10}
+            tagname=${GITHUB_REF:10}
           fi
-          echo ::set-output name=val::$name
-          echo TAG=$name >> $GITHUB_ENV
+          echo TAG=$tagname >> $GITHUB_ENV
+          echo "TAG=${tagname}" >> $GITHUB_OUTPUT          
         id: tagname
 
       - name: Upload binaries to release
