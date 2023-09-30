@@ -15,8 +15,6 @@ use crate::providers::gitlab::methods::{
     remove_labels_from_gitlab_issue,
 };
 
-use crate::providers::o365::methods::add_new_task_o365;
-
 use reqwest::Client;
 
 const ERRMSG_DEFAULT_PROVIDER: &str = "No default provider was found. Ensure you have {defaults.for_newtasks: true} for your chosen provider";
@@ -63,10 +61,7 @@ pub async fn add_new_task(
             )
             .await?
         }
-        TaskIssueProvider::O365(repo) => {
-            add_new_task_o365(&repo, &config.o365.as_ref().unwrap(), &title, details, tags).await?
-        }
-        _ => return Err(anyhow::anyhow!("Unsupported provider")),
+
     }
 
     Ok(())
@@ -102,10 +97,7 @@ pub async fn remove_tags_from_task(
             )
             .await?
         }
-        _ => unimplemented!(
-            "Adding tags to an issue for {} is not supported yet",
-            &provider_and_issue.clone()
-        ),
+
     }
 
     Ok(())
@@ -140,10 +132,7 @@ pub async fn add_tags_to_task(
             )
             .await?
         }
-        _ => unimplemented!(
-            "Adding tags to an issue for {} is not supported yet",
-            &provider_and_issue.clone()
-        ),
+
     }
 
     Ok(())
@@ -222,9 +211,7 @@ pub async fn close_task( app_config: &AppConfig,
                 );
             }
         }
-        TaskIssueProvider::O365(_todolist_config) => {
-            unimplemented!("o365 close not yet")
-        }
+
     }
 
     Ok(())
