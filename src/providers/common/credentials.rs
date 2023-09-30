@@ -1,4 +1,4 @@
-use anyhow::Result;
+
 use keyring::Entry;
 use serde::Deserialize;
 

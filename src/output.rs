@@ -1,8 +1,8 @@
 use crate::config::{Colors, ProviderIface};
 use crate::providers::github::methods::collect_tasks_from_github;
-use crate::providers::github::model::GitHubConfig;
+
 use crate::providers::gitlab::methods::collect_tasks_from_gitlab;
-use crate::providers::gitlab::model::GitLabConfig;
+
 use crate::{config::AppConfig, providers::common::model::Issue};
 use colored::{Color, Colorize};
 use std::str::FromStr;
@@ -168,7 +168,6 @@ pub async fn aggregate_and_display_all_tasks(
 pub async fn list_providers(
     config: &AppConfig,
 ) -> Result<(), anyhow::Error> {
-    let mut all_providers: Vec<Box<dyn ProviderIface>> = Vec::new();
 
     if let Some(github_config) = &config.github_com {
         for x in &github_config.repositories {
