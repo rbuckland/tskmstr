@@ -2,7 +2,6 @@
 #![feature(unboxed_closures)]
 
 use anyhow::Result;
-use expanduser::expanduser;
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
 
@@ -18,7 +17,7 @@ mod providers;
 use config::AppConfig;
 use control::*;
 use providers::common::{model::TaskIssueProviderConfig};
-use std::{str::FromStr, collections::HashSet};
+use std::{str::FromStr, collections::HashSet, path::PathBuf};
 
 use output::{aggregate_and_display_all_tasks, list_providers};
 
@@ -30,8 +29,11 @@ struct Cli {
     #[arg(short, long)]
     debug: bool,
 
-    #[arg(short, long, default_value = "~/.config/tskmstr/tskmstr.config.yml")]
-    config: String,
+    /// Config file default is "~/.config/tskmstr/tskmstr.config.yml"
+    /// For Windows %LOCALAPPDATA%/tskmstr/tskmstr.config.yml
+    /// For OSX ~/Library/Preferences/tskmstr/tskmstr.config.yml
+    #[arg(short, long)]
+    config: Option<String>,
 
     /// Limit the activity to one task/issue provider
     #[arg(short, long)]
@@ -107,8 +109,14 @@ struct TagOperationParameters {
 async fn main() -> Result<(), anyhow::Error> {
     let args = Cli::parse();
     // Read the repository configuration from YAML
-    let config_file = std::fs::read_to_string(expanduser(&args.config)?)?;
-    let config: AppConfig = serde_yaml::from_str(&config_file)?;
+    let t_xdg = xdg::BaseDirectories::with_prefix("tskmstr")?;
+    let config_file = match &args.config {
+        Some(x) => PathBuf::from(x),
+        None => t_xdg.get_config_file(PathBuf::from("tskmstr.config.yml"))
+    };
+
+    let contents = std::fs::read_to_string(config_file)?;
+    let config: AppConfig = serde_yaml::from_str(&contents)?;
 
     // Initialize your logger
     if args.debug || config.debug.is_some() {
