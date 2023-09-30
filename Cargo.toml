@@ -11,10 +11,6 @@ channel = "nightly"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[[bin]]
-name = "t"
-path = "src/main.rs"
-
 [dependencies]
 reqwest = { version  = "0.11",  features = [ "json"] }
 serde = { version = "1.0" , features = [ "derive"] }
