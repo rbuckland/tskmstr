@@ -12,6 +12,7 @@
 
 - [tskmstr](#tskmstr)
   - [Installation](#installation)
+  - [Building](#building)
   - [Configuration](#configuration)
   - [Usage](#usage)
     - [Adding a Task](#adding-a-task)
@@ -19,6 +20,7 @@
   - [Listing Tasks](#listing-tasks)
   - [Adding and Removing Labels](#adding-and-removing-labels)
   - [Command Reference](#command-reference)
+  - [Features](#features)
   - [Contributing](#contributing)
   - [License](#license)
 
@@ -38,6 +40,17 @@ With tskmstr, you can efficiently interact with your tasks, categorize them with
 For more complicated activties, (triage, workflow, attachments) complex editing. Then this tool is not that. Think of **tskmstr** as a pane of glass, into the aggregated view of tasks/todo/lists you need to work on.
 
 ## Installation
+
+Download the latest release for your OS from 
+
+* [relases](https://github.com/rbuckland/tskmstr/releases)
+
+1. place it in your path (~/.local/bin, /usr/local/bin)
+2. Create a symlink `t` (it's less to type)
+    `ln -s $(which tskmstr) $(dirname $(which tskmstr))/e`
+3. Now configure - [Configuration](#configuration)
+
+## Building
 
 To use **tskmstr**, you'll need to build it from source. Follow these steps:
 
@@ -208,7 +221,7 @@ The `provider-id` is the entry in the config `id: K` or `id: Ⓐ` for example.
 t --provider-id K add <title> <details>
 ```
 
-## Closing a Task
+### Closing a Task
 
 To close a task, use the close command:
 
@@ -218,7 +231,7 @@ t close <issue_id>
 
 Replace <issue_id> with the ID of the task you want to close. (e.g. `Ⓐ/22`, `gh2/444`)
 
-## Listing Tasks
+### Listing Tasks
 
 To list all your tasks, grouped by labels and priority, simply run:
 
