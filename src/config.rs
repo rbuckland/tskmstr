@@ -7,7 +7,6 @@ use serde::Deserialize;
 
 use crate::providers::github::model::{GitHubConfig, GitHubRepository};
 use crate::providers::gitlab::model::{GitLabConfig, GitLabRepository};
-use crate::providers::o365::model::{O365Config, O365TodoList};
 
 
 
@@ -25,7 +24,6 @@ pub struct AppConfig {
     #[serde(rename = "gitlab.com")]
     pub gitlab_com: Option<GitLabConfig>,
 
-    pub o365: Option<O365Config>,
 }
 #[derive(Debug, Deserialize, Clone)]
 pub struct LabelConfig {
@@ -38,7 +36,6 @@ pub struct LabelConfig {
 pub enum TaskIssueProvider {
     GitHub(GitHubRepository),
     GitLab(GitLabRepository),
-    O365(O365TodoList),
 }
 
 /// Configure a task/issue source as default for some behaviour
@@ -130,15 +127,6 @@ impl AppConfig {
             }
         }
 
-        if let Some(o365_config) = &self.o365 {
-            if let Some(default_ti) = o365_config
-                .todo_lists
-                .iter()
-                .find(|&list| f(Box::new(list)))
-            {
-                return Ok(Some(TaskIssueProvider::O365(default_ti.clone())));
-            }
-        }
 
         Ok(None)
     }
@@ -158,7 +146,6 @@ impl Default for AppConfig {
             github_com: None,
             gitlab_com: None,
             labels: LabelConfig { priority_labels: HashSet::new(), priority_timeframe: None },
-            o365: None,
             colors: Colors {
                 issue_id: "magenta".to_string(),
                 title: "blue".to_string(),
