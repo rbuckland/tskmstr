@@ -3,7 +3,17 @@ name = "tskmstr"
 version = "0.5.1"
 edition = "2021"
 
+[toolchain]
+# we are using nicer Fn features
+#![feature(fn_traits)] Fn
+#![feature(unboxed_closures)] (no Box<Fn....>
+channel = "nightly"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "t"
+path = "src/main.rs"
 
 [dependencies]
 reqwest = { version  = "0.11",  features = [ "json"] }
@@ -11,7 +21,7 @@ serde = { version = "1.0" , features = [ "derive"] }
 serde_json = { version  = "1.0" }
 tokio = { version = "1", features = ["full"] }
 serde_yaml = "0.9"
-structopt = "0.3"
+clap = { version = "4.4.6", features = [ "derive"] }
 shellexpand = "3.1.0"
 expanduser = "1.2.2"
 tui = "0.19"
