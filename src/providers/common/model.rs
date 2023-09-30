@@ -1,18 +1,4 @@
-use std::fmt;
-
-use anyhow::Result;
-use lazy_static::lazy_static;
-use regex::Regex;
 use serde::Deserialize;
-
-use crate::config::{AppConfig, TaskIssueProvider};
-
-
-
-use crate::providers::github::SHORT_CODE_GITHUB;
-use crate::providers::gitlab::SHORT_CODE_GITLAB;
-
-use crate::providers::o365::SHORT_CODE_O365;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Issue {
