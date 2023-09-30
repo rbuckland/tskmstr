@@ -1,8 +1,9 @@
+use colored::Color;
 use std::str::FromStr;
 
 use serde::Deserialize;
 
-use crate::providers::common::credentials::{HasSecretToken, CredentialKeyringEntry};
+use crate::{providers::common::credentials::{HasSecretToken, CredentialKeyringEntry}, config::{Defaults, ProviderIface}};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct GitHubLabel {
@@ -42,7 +43,33 @@ impl HasSecretToken for GitHubConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct GitHubRepository {
+    /// a unique character across the entire repository config
+    /// which will be used for display and CMD line choices
+    /// If an ID is not set, an auto generated one will be created
+    pub id: String,
+
+    /// In output, Where color is appropriate, together with the ID, this will be used
+    pub color: String,
+
+    /// the github Owner of the repository
     pub owner: String,
+
+    /// the github repository name
     pub repo: String,
-    pub default: Option<bool>,
+
+    /// Defauls configuration
+    pub defaults: Option<Defaults>,
+}
+
+impl ProviderIface for GitHubRepository {
+    fn defaults(&self) -> Option<Defaults> {
+        self.defaults.clone()
+    }
+    fn color(&self) -> Color {
+        Color::from_str(&self.color).unwrap()
+    }
+
+    fn id(&self) -> String {
+        self.id.clone()
+    }    
 }

@@ -12,7 +12,18 @@ labels:
   # if the due date is before this time (regardless of having urgent/todo label)
   priority_timeframe: 48hrs
 gitlab.com:
-  token: glpat-foobar
+  credential:
+    service: gitlab.com
+    username: myusername_in_keyring_entry_pat
   repositories:
-    - project_id: someorg%2Fmy-tasks
-      default: true
+     # a great set of unicode characters are here - https://www.compart.com/en/unicode/category/So
+    - id: 🅆
+      color: blue
+      project_id: someorg%2Fmy-tasks
+      defaults:
+        for_new_tasks: true
+    - id: 🄿
+      color: green    
+      project_id: someorg%2Fmy-tasks
+      defaults:
+        for_new_tasks: true
