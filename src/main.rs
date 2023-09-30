@@ -20,6 +20,7 @@ use std::{str::FromStr, collections::HashSet, path::PathBuf};
 
 use output::{aggregate_and_display_all_tasks, list_providers};
 
+use directories::ProjectDirs;
 
 #[derive(Debug, Parser)] // requires `derive` feature
 #[command(name = "t")]
@@ -108,10 +109,17 @@ struct TagOperationParameters {
 async fn main() -> Result<(), anyhow::Error> {
     let args = Cli::parse();
     // Read the repository configuration from YAML
-    let t_xdg = xdg::BaseDirectories::with_prefix("tskmstr")?;
+
     let config_file = match &args.config {
-        Some(x) => PathBuf::from(x),
-        None => t_xdg.get_config_file(PathBuf::from("tskmstr.config.yml"))
+        Some(x) => PathBuf::from(x).as_os_str().to_owned(),
+        None => { 
+            let proj_dirs = ProjectDirs::from("org", "inosion",  "tskmstr").unwrap_or_else(|| panic!("No Config directory found"));
+            let mut config_dir = proj_dirs.config_dir().as_os_str().to_owned();
+            config_dir.push("/tskmstr.config.yml");
+            config_dir
+        }
+    
+    
     };
 
     let contents = std::fs::read_to_string(config_file)?;
