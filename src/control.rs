@@ -19,6 +19,8 @@ use crate::providers::o365::methods::add_new_task_o365;
 
 use reqwest::Client;
 
+const ERRMSG_DEFAULT_PROVIDER: &str = "No default provider was found. Ensure you have {defaults.for_newtasks: true} for your chosen provider";
+
 /// add a new task is either
 /// add a new task to the default todo provider
 /// or, a provider_id is supplied (gl3, o365_2)
@@ -31,12 +33,12 @@ pub async fn add_new_task(
     tags: &Option<Vec<String>>,
 ) -> Result<(), anyhow::Error> {
     debug!("creating new task {} {:?}", &title, &tags);
+    debug!("default provider is {:?}", &config.find_default_provider());
 
     let x = match provider_id {
-        None => config.default_taskissue_provider().expect("failed").unwrap(),
-        Some(p_and_id) => TaskIssueProviderConfig::from_str(&p_and_id)
-            .expect("the todo provider id was invalid")
-            .task_supplier(&config),
+        None => config.find_default_provider().expect(ERRMSG_DEFAULT_PROVIDER).unwrap_or_else(||panic!("{}",ERRMSG_DEFAULT_PROVIDER)),
+        Some(provider) => config.find_provider_for_issue(provider)
+            .expect("The todo provider id was invalid").unwrap()
     };
 
     // Add the logic to call the appropriate add_new_task function based on the provider

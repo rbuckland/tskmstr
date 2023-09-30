@@ -1,6 +1,7 @@
 use std::collections::HashSet;
-use std::hash::Hash;
 
+
+use anyhow::bail;
 use colored::Color;
 use serde::Deserialize;
 
@@ -33,6 +34,7 @@ pub struct LabelConfig {
 }
 
 /// there is only one default "place" we will create tasks into
+#[derive(Debug, Deserialize, Clone)]
 pub enum TaskIssueProvider {
     GitHub(GitHubRepository),
     GitLab(GitLabRepository),
@@ -67,6 +69,15 @@ pub trait ProviderIface {
 
 impl AppConfig {
 
+    pub fn find_provider_for_issue(&self, issue: &String) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
+        let maybe_provider: Vec<&str> = issue.split('/').collect();
+        let p = String::from(*maybe_provider.first().unwrap_or_else(|
+            | panic!("oops: the issue ID {} appears invalid. It was not prefixed with one of the Providers {:?}", issue, self.provider_ids())
+        ));
+
+        self.find_by(|repo: Box<&dyn ProviderIface>| repo.id() == p)
+    }
+
     /// Called after configuration is loaded. It determines the unique
     /// IDs for all Task/Issue providers
     // Function to get a Vec<String> of all provider IDs
@@ -90,14 +101,16 @@ impl AppConfig {
         provider_ids
     }
 
-    pub fn default_taskissue_provider(&self) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
-        debug!("looking for the default Task/Issue Provider");
+    pub fn find_default_provider(&self) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
+        self.find_by(|repo: Box<&dyn ProviderIface>| repo.is_default())
+    }
 
+    pub fn find_by<F: Fn(Box<&dyn ProviderIface>) -> bool>(&self, f: F) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
         if let Some(github_config) = &self.github_com {
             if let Some(default_repo) = github_config
                 .repositories
                 .iter()
-                .find(|&repo| repo.is_default())
+                .find(|&repo| f(Box::new(repo)))
             {
                 return Ok(Some(TaskIssueProvider::GitHub(default_repo.clone())));
             }
@@ -107,7 +120,7 @@ impl AppConfig {
             if let Some(default_repo) = gitlab_config
                 .repositories
                 .iter()
-                .find(|repo| repo.is_default())
+                .find(|&repo| f(Box::new(repo)))
             {
                 return Ok(Some(TaskIssueProvider::GitLab(default_repo.clone())));
             }
@@ -117,7 +130,7 @@ impl AppConfig {
             if let Some(default_ti) = o365_config
                 .todo_lists
                 .iter()
-                .find(|list| list.is_default())
+                .find(|&list| f(Box::new(list)))
             {
                 return Ok(Some(TaskIssueProvider::O365(default_ti.clone())));
             }
