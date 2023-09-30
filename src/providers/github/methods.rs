@@ -28,7 +28,7 @@ pub async fn collect_tasks_from_github(
     let client = Client::new();
     let mut all_issues = Vec::new(); // Create a vector to collect all issues
 
-    for (idx, repo) in github_config
+    for (_idx, repo) in github_config
         .repositories
         .iter()
         .filter(|&r| provider_id.is_none() || provider_id.as_deref().is_some_and(|p| r.id == p))

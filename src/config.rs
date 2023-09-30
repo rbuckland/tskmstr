@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 
-use anyhow::bail;
+
 use colored::Color;
 use serde::Deserialize;
 
@@ -9,7 +9,7 @@ use crate::providers::github::model::{GitHubConfig, GitHubRepository};
 use crate::providers::gitlab::model::{GitLabConfig, GitLabRepository};
 use crate::providers::o365::model::{O365Config, O365TodoList};
 
-use log::{debug, error, info, warn};
+
 
 #[derive(Debug, Deserialize)]
 pub struct AppConfig {
@@ -78,6 +78,10 @@ impl AppConfig {
         self.find_by(|repo: Box<&dyn ProviderIface>| repo.id() == p)
     }
 
+    pub fn find_provider_by_id(&self, provider_id: &str) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
+        self.find_by(|repo: Box<&dyn ProviderIface>| repo.id() == String::from(provider_id))
+    }
+    
     /// Called after configuration is loaded. It determines the unique
     /// IDs for all Task/Issue providers
     // Function to get a Vec<String> of all provider IDs

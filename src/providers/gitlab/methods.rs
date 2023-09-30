@@ -4,7 +4,7 @@ use crate::providers::common::credentials::HasSecretToken;
 use crate::providers::common::model::Issue;
 use crate::providers::gitlab::model::GitLabConfig;
 use crate::providers::gitlab::model::GitLabIssue;
-use crate::providers::gitlab::SHORT_CODE_GITLAB;
+
 use anyhow::{Result, anyhow};
 use serde_json::json;
 
@@ -29,7 +29,7 @@ pub async fn collect_tasks_from_gitlab(
     let client = Client::new();
     let mut all_issues = Vec::new();
 
-    for (idx, repo) in gitlab_config
+    for (_idx, repo) in gitlab_config
     .repositories
     .iter()
     .filter(|&r| provider_id.is_none() || provider_id.as_deref().is_some_and(|p| r.id == p))
