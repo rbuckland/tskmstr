@@ -126,55 +126,60 @@ Now you're ready to start using tskmstr!
 t 
 ```
 
-Example output looks like
+Example output looks like below. 
+In this example, the ID's for the repos are
+    * 🅆 - for a work repository
+    * Ⓐ - for a application repository
+    * 🄿 - for a personal repository (which has no code, just tasks to do)
+
 ```
 Priority: now, urgent, todo
 ----------------------------------------
- - 🅆-54 analyze rock formations (urgent, geology, research)
- - 🅆-53 study sedimentary layers (urgent, geology, analysis)
- - Ⓐ-18 survey geological fault lines (urgent, geology)
- - Ⓐ-8 analyze soil composition (urgent, geology)
- - Ⓐ-7 investigate geological formations (urgent, geology)
+ - 🅆/54 analyze rock formations (urgent, geology, research)
+ - 🅆/53 study sedimentary layers (urgent, geology, analysis)
+ - Ⓐ/18 survey geological fault lines (urgent, geology)
+ - Ⓐ/8 analyze soil composition (urgent, geology)
+ - Ⓐ/7 investigate geological formations (urgent, geology)
  
 Tag: <no labels>
 ----------------------------------------
- - 🅆-16 geological survey of mountain ranges ()
- - 🄿-14 Study Earth's crust composition ()
- - 🄿-13 Analyze rock strata for fossils ()
- - 🄿-1 Study geological time periods ()
- - Ⓐ-19 Volcanic activity observation ()
- - Ⓐ-6 Study seismic fault lines ()
+ - 🅆/16 geological survey of mountain ranges ()
+ - 🄿/14 Study Earth's crust composition ()
+ - 🄿/13 Analyze rock strata for fossils ()
+ - 🄿/1 Study geological time periods ()
+ - Ⓐ/19 Volcanic activity observation ()
+ - Ⓐ/6 Study seismic fault lines ()
 
 Tag: car
 ----------------------------------------
- - 🅆-48 organise monthly debit for car wash of ute (car)
- - 🅆-47 re-order instruments in the rear tray (car)
+ - 🅆/48 organise monthly debit for car wash of ute (car)
+ - 🅆/47 re-order instruments in the rear tray (car)
 
 Tag: helpful
 ----------------------------------------
- - Ⓐ-14 Geological research library (helpful)
+ - Ⓐ/14 Geological research library (helpful)
 
 Tag: client-3112
 ----------------------------------------
- - 🅆-30 analyze soil quality for gardening (client-3112)
- - 🅆-29 geological assessment of backyard (client-3112)
- - 🅆-28 Soil stability testing (client-3112)
- - 🅆-27 Foundation rock type analysis (client-3112)
- - 🅆-26 Geological inspection of basement (client-3112)
- - 🅆-25 Geological assessment of attic (client-3112)
+ - 🅆/30 analyze soil quality for gardening (client-3112)
+ - 🅆/29 geological assessment of backyard (client-3112)
+ - 🅆/28 Soil stability testing (client-3112)
+ - 🅆/27 Foundation rock type analysis (client-3112)
+ - 🅆/26 Geological inspection of basement (client-3112)
+ - 🅆/25 Geological assessment of attic (client-3112)
  
 Tag: hr3
 ----------------------------------------
- - Ⓐ-17 Geological documentation for HR3 project (hr3)
- - Ⓐ-16 Geological panel report (hr3)
+ - Ⓐ/17 Geological documentation for HR3 project (hr3)
+ - Ⓐ/16 Geological panel report (hr3)
 
 Tag: renovations
 ----------------------------------------
- - 🅆-20 Geological assessment for pool excavation (renovations)
+ - 🅆/20 Geological assessment for pool excavation (renovations)
 
 ```
 
-Each of the "repositories" is numbered, `<gl><nnn>/<issue_id>` or `<gh><nnn>/<issue_id>`
+Each of the "repositories" has a unique ID which comes from the config file `<gl><nnn>/<issue_id>` or `<gh><nnn>/<issue_id>`
 
 
 ## Usage
@@ -190,9 +195,10 @@ This command adds a new task with the specified title, details, and tags.
 It will add it to the `default`, which is set in the config.
 
 Use this form when adding a task to a specified repository.
+The `provider-id` is the entry in the config `id: K` or `id: Ⓐ` for example.
 
 ```
-t add  <title> <details> -- gh2
+t --provider-id K add <title> <details>
 ```
 
 ## Closing a Task
@@ -200,17 +206,17 @@ t add  <title> <details> -- gh2
 To close a task, use the close command:
 
 ```
-tskmstr close <issue_id>
+t close <issue_id>
 ```
 
-Replace <issue_id> with the ID of the task you want to close. (e.g. `Ⓐ-22`, `gh2/444`)
+Replace <issue_id> with the ID of the task you want to close. (e.g. `Ⓐ/22`, `gh2/444`)
 
 ## Listing Tasks
 
 To list all your tasks, grouped by labels and priority, simply run:
 
 ```
-tskmstr
+t
 ```
 
 ## Adding and Removing Labels
