@@ -2,6 +2,12 @@ on:
   release:
     types: [created]
 
+
+env:
+  BIN_NAME: t
+  PROJECT_NAME: tskmstr
+  REPO_NAME: rbuckland/tskmstr
+  
 jobs:
   release:
     name: release ${{ matrix.target }}
@@ -9,13 +15,105 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [x86_64-pc-windows-gnu, x86_64-unknown-linux-musl, aarch64-unknown-linux-musl, x86_64-apple-darwin, aarch64-apple-darwin]
+        build: [x86_64-linux, aarch64-linux, aarch64-macos, x86_64-macos, x86_64-windows, aarch64-windows, x86_64-freebsd]
+        include:
+        - build: x86_64-linux
+          os: ubuntu-22.04
+          rust: nightly
+          target: x86_64-unknown-linux-gnu
+        - build: aarch64-linux
+          os: ubuntu-22.04
+          rust: nightly
+          target: aarch64-unknown-linux-gnu
+          cross: true
+        - build: x86_64-macos
+          os: macos-latest
+          rust: nightly
+          target: x86_64-apple-darwin
+          cross: false
+        - build: x86_64-windows
+          os: windows-2019
+          rust: nightly
+          target: x86_64-pc-windows-msvc
+          cross: false
+        - build: aarch64-windows
+          os: windows-2019
+          rust: nightly
+          target: aarch64-pc-windows-msvc
+          cross: true
+        - build: aarch64-macos
+          os: macos-latest
+          rust: nightly
+          cross: true
+          target: aarch64-apple-darwin
+        - build: x86_64-freebsd
+          os: ubuntu-22.04
+          rust: nightly
+          cross: true
+          target: x86_64-unknown-freebsd
     steps:
-      - uses: actions/checkout@master
-      - name: Compile and release
-        uses: rust-build/rust-build.action@v1.4.3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout Source
+        uses: actions/checkout@master
+      - name: Install ${{ matrix.rust }} toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          RUSTTARGET: ${{ matrix.target }}
-          EXTRA_FILES: "README.md LICENSE"
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+          override: true
+
+     - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.cross }}
+          command: test
+          args: --release --locked --target ${{ matrix.target }}
+
+      - name: Build release binary
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.cross }}
+          command: build
+          args: --release --locked --target ${{ matrix.target }}
+
+      - name: Strip release binary (linux and macos)
+        if: matrix.build == 'x86_64-linux' || matrix.build == 'x86_64-macos'
+        run: strip "target/${{ matrix.target }}/release/$BIN_NAME"
+
+      - name: Strip release binary (arm)
+        if: matrix.build == 'aarch64-linux'
+        run: |
+          docker run --rm -v \
+            "$PWD/target:/target:Z" \
+            rustembedded/cross:${{ matrix.target }} \
+            aarch64-linux-gnu-strip \
+            /target/${{ matrix.target }}/release/$BIN_NAME
+
+      - name: Copy file to dist
+        shell: bash
+        run: |
+          mkdir -p dist 2> /dev/null
+          if [ "${{ matrix.os }}" = "windows-2019" ]; then
+            cp "target/${{ matrix.target }}/release/$BIN_NAME.exe" "dist/"
+          else
+            cp "target/${{ matrix.target }}/release/$BIN_NAME" "dist/"
+          fi
+
+      - name: Calculate tag name
+        run: |
+          name=dev
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            name=${GITHUB_REF:10}
+          fi
+          echo ::set-output name=val::$name
+          echo TAG=$name >> $GITHUB_ENV
+        id: tagname
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/$BIN_NAME*
+          file_glob: true
+          tag: ${{ steps.tagname.outputs.val }}
+          overwrite: true 
