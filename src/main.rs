@@ -1,3 +1,6 @@
+#![feature(fn_traits)]
+#![feature(unboxed_closures)]
+
 use anyhow::Result;
 use expanduser::expanduser;
 #[allow(unused_imports)]
@@ -17,7 +20,7 @@ use control::*;
 use providers::common::{model::TaskIssueProviderConfig};
 use std::{str::FromStr, collections::HashSet};
 
-use output::aggregate_and_display_all_tasks;
+use output::{aggregate_and_display_all_tasks, list_providers};
 
 
 #[derive(Debug, Parser)] // requires `derive` feature
@@ -59,6 +62,9 @@ enum Command {
     /// Add and remove tags/labels of issues/tasks
     #[command(subcommand)]
     Tags(TagsCommand),
+
+    /// List Providers
+    Providers,
 
 }
 
@@ -132,6 +138,9 @@ async fn main() -> Result<(), anyhow::Error> {
             let tag_set: &HashSet<String> = &tag_removals.tags.into_iter().collect();
             let task_source = TaskIssueProviderConfig::from_str(&tag_removals.id)?;
             remove_tags_from_task(&config, task_source, &tag_set).await?;
+        }
+        Some(Command::Providers) => {
+            list_providers(&config).await?;
         }
         None => aggregate_and_display_all_tasks(&args.provider_id, &config, &colors).await?,
     };
