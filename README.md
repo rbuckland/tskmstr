@@ -2,6 +2,9 @@
 
 **Aggregates all tasks/issues together, across your entire world**
 
+> I wrote this to better manage my world, and view across all aspects of my work and personal endeavours.
+
+**tskmstr** is not SaaS, it uses the existing issue stores you intreract with.
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
 
@@ -28,7 +31,11 @@ It aggregates your TODO/Task/Work items from
 - github issues
 - gitlab issues
 
-With tskmstr, you can efficiently interact with your tasks, categorize them with labels, and view them, and perform basic operations on them (new, close, re-label)
+You can use a private repo on gitlab, or github to store your personal **TODO** items, and aggregate these with opensource, and private projects you contribute and work on.
+
+With tskmstr, you can efficiently interact with your tasks, categorize them with labels, and view them, and perform basic operations on them (new, close, re-label).
+
+For more complicated activties, (triage, workflow, attachments) complex editing. Then this tool is not that. Think of **tskmstr** as a pane of glass, into the aggregated view of tasks/todo/lists you need to work on.
 
 ## Installation
 
@@ -188,7 +195,7 @@ Each of the "repositories" has a unique ID which comes from the config file `<gl
 To add a new task to your default repository, use the add command:
 
 ```
-tskmstr add "Task Title" "Task Details" --tags tag1 tag2 tag3
+tskmstr add "Task Title" "Task Details" tag1 tag2 tag3
 ``````
 
 This command adds a new task with the specified title, details, and tags.
@@ -235,6 +242,11 @@ tskmstr tags remove <issue_id> tag1 tag2 tag3
     list: List all tasks/issues, grouped by labels and priority.
     tags add: Add tags to a task.
     tags remove: Remove tags from a task.
+
+
+## Features
+
+* [features](doc/features_roadmap.md)
 
 ## Contributing
 
