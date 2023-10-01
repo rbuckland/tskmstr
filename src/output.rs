@@ -3,6 +3,7 @@ use crate::providers::github::methods::collect_tasks_from_github;
 
 use crate::providers::gitlab::methods::collect_tasks_from_gitlab;
 
+use crate::providers::jira::methods::collect_tasks_from_jira;
 use crate::{config::AppConfig, providers::common::model::Issue};
 use colored::{Color, Colorize};
 use std::str::FromStr;
@@ -37,7 +38,7 @@ fn group_tasks_by_labels(
             };
 
             acc.entry(group_key)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(issue.clone());
             acc
         })
@@ -151,16 +152,19 @@ pub async fn aggregate_and_display_all_tasks(
     let mut all_issues = Vec::new();
 
     if let Some(github_config) = &config.github_com {
-        let github_tasks = collect_tasks_from_github(github_config, &provider_id).await?;
+        let github_tasks = collect_tasks_from_github(github_config, provider_id).await?;
         all_issues.extend(github_tasks);
     }
 
     if let Some(gitlab_config) = &config.gitlab_com {
-        let gitlab_tasks = collect_tasks_from_gitlab(gitlab_config, &provider_id).await?;
+        let gitlab_tasks = collect_tasks_from_gitlab(gitlab_config, provider_id).await?;
         all_issues.extend(gitlab_tasks);
     }
 
-    let _ = display_tasks_in_table(&all_issues, &colors, &config.labels.priority_labels);
+    let jira_tasks = collect_tasks_from_jira(&config.jira, provider_id).await?;
+    all_issues.extend(jira_tasks);
+
+    let _ = display_tasks_in_table(&all_issues, colors, &config.labels.priority_labels);
 
     Ok(())
 }

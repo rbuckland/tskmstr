@@ -1,0 +1,620 @@
+{
+    "expand": "schema,names",
+    "startAt": 0,
+    "maxResults": 50,
+    "total": 3,
+    "issues": [
+        {
+            "expand": "operations,versionedRepresentations,editmeta,changelog,customfield_10010.requestTypePractice,renderedFields",
+            "id": "10002",
+            "self": "https://tskmstr.atlassian.net/rest/api/3/issue/10002",
+            "key": "KAN-3",
+            "fields": {
+                "statuscategorychangedate": "2023-10-01T09:40:37.529+1100",
+                "issuetype": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/issuetype/10001",
+                    "id": "10001",
+                    "description": "Tasks track small, distinct pieces of work.",
+                    "iconUrl": "https://tskmstr.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10318?size=medium",
+                    "name": "Task",
+                    "subtask": false,
+                    "avatarId": 10318,
+                    "entityId": "133a91e5-a2aa-4081-b3d7-daefe7cb9821",
+                    "hierarchyLevel": 0
+                },
+                "parent": {
+                    "id": "10000",
+                    "key": "KAN-1",
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/issue/10000",
+                    "fields": {
+                        "summary": "[Epic: Add epic summary]",
+                        "status": {
+                            "self": "https://tskmstr.atlassian.net/rest/api/3/status/10000",
+                            "description": "",
+                            "iconUrl": "https://tskmstr.atlassian.net/",
+                            "name": "To Do",
+                            "id": "10000",
+                            "statusCategory": {
+                                "self": "https://tskmstr.atlassian.net/rest/api/3/statuscategory/2",
+                                "id": 2,
+                                "key": "new",
+                                "colorName": "blue-gray",
+                                "name": "To Do"
+                            }
+                        },
+                        "priority": {
+                            "self": "https://tskmstr.atlassian.net/rest/api/3/priority/3",
+                            "iconUrl": "https://tskmstr.atlassian.net/images/icons/priorities/medium.svg",
+                            "name": "Medium",
+                            "id": "3"
+                        },
+                        "issuetype": {
+                            "self": "https://tskmstr.atlassian.net/rest/api/3/issuetype/10002",
+                            "id": "10002",
+                            "description": "Epics track collections of related bugs, stories, and tasks.",
+                            "iconUrl": "https://tskmstr.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10307?size=medium",
+                            "name": "Epic",
+                            "subtask": false,
+                            "avatarId": 10307,
+                            "entityId": "d7de3e28-8085-4009-9878-6288c6bba044",
+                            "hierarchyLevel": 1
+                        }
+                    }
+                },
+                "timespent": null,
+                "customfield_10030": null,
+                "project": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/project/10000",
+                    "id": "10000",
+                    "key": "KAN",
+                    "name": "My Kanban Project",
+                    "projectTypeKey": "software",
+                    "simplified": true,
+                    "avatarUrls": {
+                        "48x48": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413",
+                        "24x24": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413?size=small",
+                        "16x16": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413?size=xsmall",
+                        "32x32": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413?size=medium"
+                    }
+                },
+                "customfield_10032": null,
+                "fixVersions": [],
+                "customfield_10033": null,
+                "aggregatetimespent": null,
+                "resolution": null,
+                "customfield_10027": null,
+                "customfield_10028": null,
+                "customfield_10029": null,
+                "resolutiondate": null,
+                "workratio": -1,
+                "lastViewed": null,
+                "watches": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/issue/KAN-3/watchers",
+                    "watchCount": 1,
+                    "isWatching": true
+                },
+                "created": "2023-10-01T09:40:36.984+1100",
+                "customfield_10020": null,
+                "customfield_10021": null,
+                "customfield_10022": null,
+                "customfield_10023": null,
+                "priority": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/priority/3",
+                    "iconUrl": "https://tskmstr.atlassian.net/images/icons/priorities/medium.svg",
+                    "name": "Medium",
+                    "id": "3"
+                },
+                "customfield_10024": null,
+                "customfield_10025": null,
+                "customfield_10026": null,
+                "labels": [
+                    "Example-label"
+                ],
+                "customfield_10016": null,
+                "customfield_10017": null,
+                "customfield_10018": {
+                    "hasEpicLinkFieldDependency": false,
+                    "showField": false,
+                    "nonEditableReason": {
+                        "reason": "PLUGIN_LICENSE_ERROR",
+                        "message": "The Parent Link is only available to Jira Premium users."
+                    }
+                },
+                "customfield_10019": "0|i0000f:",
+                "timeestimate": null,
+                "aggregatetimeoriginalestimate": null,
+                "versions": [],
+                "issuelinks": [],
+                "assignee": null,
+                "updated": "2023-10-01T09:40:37.436+1100",
+                "status": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/status/10000",
+                    "description": "",
+                    "iconUrl": "https://tskmstr.atlassian.net/",
+                    "name": "To Do",
+                    "id": "10000",
+                    "statusCategory": {
+                        "self": "https://tskmstr.atlassian.net/rest/api/3/statuscategory/2",
+                        "id": 2,
+                        "key": "new",
+                        "colorName": "blue-gray",
+                        "name": "To Do"
+                    }
+                },
+                "components": [],
+                "timeoriginalestimate": null,
+                "description": {
+                    "version": 1,
+                    "type": "doc",
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": "Add task description here... For example: \"Sync with Team Saturn re: future content direction\"."
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "customfield_10010": null,
+                "customfield_10014": null,
+                "customfield_10015": "2023-10-21",
+                "customfield_10005": null,
+                "customfield_10006": null,
+                "customfield_10007": null,
+                "security": null,
+                "customfield_10008": null,
+                "customfield_10009": null,
+                "aggregatetimeestimate": null,
+                "summary": "[Task 2: Add task summary]",
+                "creator": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/user?accountId=712020%3A000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "accountId": "712020:000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "emailAddress": "ramon@thebuckland.com",
+                    "avatarUrls": {
+                        "48x48": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "24x24": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "16x16": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "32x32": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png"
+                    },
+                    "displayName": "Ramon Buckland",
+                    "active": true,
+                    "timeZone": "Australia/Sydney",
+                    "accountType": "atlassian"
+                },
+                "subtasks": [],
+                "reporter": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/user?accountId=712020%3A000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "accountId": "712020:000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "emailAddress": "ramon@thebuckland.com",
+                    "avatarUrls": {
+                        "48x48": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "24x24": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "16x16": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "32x32": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png"
+                    },
+                    "displayName": "Ramon Buckland",
+                    "active": true,
+                    "timeZone": "Australia/Sydney",
+                    "accountType": "atlassian"
+                },
+                "aggregateprogress": {
+                    "progress": 0,
+                    "total": 0
+                },
+                "customfield_10001": null,
+                "customfield_10002": null,
+                "customfield_10003": null,
+                "customfield_10004": null,
+                "environment": null,
+                "duedate": "2023-11-04",
+                "progress": {
+                    "progress": 0,
+                    "total": 0
+                },
+                "votes": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/issue/KAN-3/votes",
+                    "votes": 0,
+                    "hasVoted": false
+                }
+            }
+        },
+        {
+            "expand": "operations,versionedRepresentations,editmeta,changelog,customfield_10010.requestTypePractice,renderedFields",
+            "id": "10001",
+            "self": "https://tskmstr.atlassian.net/rest/api/3/issue/10001",
+            "key": "KAN-2",
+            "fields": {
+                "statuscategorychangedate": "2023-10-01T09:40:37.407+1100",
+                "issuetype": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/issuetype/10001",
+                    "id": "10001",
+                    "description": "Tasks track small, distinct pieces of work.",
+                    "iconUrl": "https://tskmstr.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10318?size=medium",
+                    "name": "Task",
+                    "subtask": false,
+                    "avatarId": 10318,
+                    "entityId": "133a91e5-a2aa-4081-b3d7-daefe7cb9821",
+                    "hierarchyLevel": 0
+                },
+                "parent": {
+                    "id": "10000",
+                    "key": "KAN-1",
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/issue/10000",
+                    "fields": {
+                        "summary": "[Epic: Add epic summary]",
+                        "status": {
+                            "self": "https://tskmstr.atlassian.net/rest/api/3/status/10000",
+                            "description": "",
+                            "iconUrl": "https://tskmstr.atlassian.net/",
+                            "name": "To Do",
+                            "id": "10000",
+                            "statusCategory": {
+                                "self": "https://tskmstr.atlassian.net/rest/api/3/statuscategory/2",
+                                "id": 2,
+                                "key": "new",
+                                "colorName": "blue-gray",
+                                "name": "To Do"
+                            }
+                        },
+                        "priority": {
+                            "self": "https://tskmstr.atlassian.net/rest/api/3/priority/3",
+                            "iconUrl": "https://tskmstr.atlassian.net/images/icons/priorities/medium.svg",
+                            "name": "Medium",
+                            "id": "3"
+                        },
+                        "issuetype": {
+                            "self": "https://tskmstr.atlassian.net/rest/api/3/issuetype/10002",
+                            "id": "10002",
+                            "description": "Epics track collections of related bugs, stories, and tasks.",
+                            "iconUrl": "https://tskmstr.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10307?size=medium",
+                            "name": "Epic",
+                            "subtask": false,
+                            "avatarId": 10307,
+                            "entityId": "d7de3e28-8085-4009-9878-6288c6bba044",
+                            "hierarchyLevel": 1
+                        }
+                    }
+                },
+                "timespent": null,
+                "customfield_10030": null,
+                "project": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/project/10000",
+                    "id": "10000",
+                    "key": "KAN",
+                    "name": "My Kanban Project",
+                    "projectTypeKey": "software",
+                    "simplified": true,
+                    "avatarUrls": {
+                        "48x48": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413",
+                        "24x24": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413?size=small",
+                        "16x16": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413?size=xsmall",
+                        "32x32": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413?size=medium"
+                    }
+                },
+                "customfield_10032": null,
+                "customfield_10033": null,
+                "fixVersions": [],
+                "aggregatetimespent": null,
+                "resolution": null,
+                "customfield_10027": null,
+                "customfield_10028": null,
+                "customfield_10029": null,
+                "resolutiondate": null,
+                "workratio": -1,
+                "lastViewed": null,
+                "watches": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/issue/KAN-2/watchers",
+                    "watchCount": 1,
+                    "isWatching": true
+                },
+                "created": "2023-10-01T09:40:36.627+1100",
+                "customfield_10020": null,
+                "customfield_10021": null,
+                "customfield_10022": null,
+                "customfield_10023": null,
+                "priority": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/priority/3",
+                    "iconUrl": "https://tskmstr.atlassian.net/images/icons/priorities/medium.svg",
+                    "name": "Medium",
+                    "id": "3"
+                },
+                "customfield_10024": null,
+                "customfield_10025": null,
+                "labels": [
+                    "Example-label"
+                ],
+                "customfield_10026": null,
+                "customfield_10016": null,
+                "customfield_10017": null,
+                "customfield_10018": {
+                    "hasEpicLinkFieldDependency": false,
+                    "showField": false,
+                    "nonEditableReason": {
+                        "reason": "PLUGIN_LICENSE_ERROR",
+                        "message": "The Parent Link is only available to Jira Premium users."
+                    }
+                },
+                "customfield_10019": "0|i00007:",
+                "timeestimate": null,
+                "aggregatetimeoriginalestimate": null,
+                "versions": [],
+                "issuelinks": [],
+                "assignee": null,
+                "updated": "2023-10-01T09:40:37.314+1100",
+                "status": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/status/10000",
+                    "description": "",
+                    "iconUrl": "https://tskmstr.atlassian.net/",
+                    "name": "To Do",
+                    "id": "10000",
+                    "statusCategory": {
+                        "self": "https://tskmstr.atlassian.net/rest/api/3/statuscategory/2",
+                        "id": 2,
+                        "key": "new",
+                        "colorName": "blue-gray",
+                        "name": "To Do"
+                    }
+                },
+                "components": [],
+                "timeoriginalestimate": null,
+                "description": {
+                    "version": 1,
+                    "type": "doc",
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": "Add task description here... For example: \"Complete audit of current sign-up flow\"."
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "customfield_10010": null,
+                "customfield_10014": null,
+                "customfield_10015": "2023-10-14",
+                "customfield_10005": null,
+                "customfield_10006": null,
+                "security": null,
+                "customfield_10007": null,
+                "customfield_10008": null,
+                "aggregatetimeestimate": null,
+                "customfield_10009": null,
+                "summary": "[Task 1: Add task summary]",
+                "creator": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/user?accountId=712020%3A000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "accountId": "712020:000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "emailAddress": "ramon@thebuckland.com",
+                    "avatarUrls": {
+                        "48x48": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "24x24": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "16x16": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "32x32": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png"
+                    },
+                    "displayName": "Ramon Buckland",
+                    "active": true,
+                    "timeZone": "Australia/Sydney",
+                    "accountType": "atlassian"
+                },
+                "subtasks": [],
+                "reporter": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/user?accountId=712020%3A000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "accountId": "712020:000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "emailAddress": "ramon@thebuckland.com",
+                    "avatarUrls": {
+                        "48x48": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "24x24": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "16x16": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "32x32": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png"
+                    },
+                    "displayName": "Ramon Buckland",
+                    "active": true,
+                    "timeZone": "Australia/Sydney",
+                    "accountType": "atlassian"
+                },
+                "aggregateprogress": {
+                    "progress": 0,
+                    "total": 0
+                },
+                "customfield_10001": null,
+                "customfield_10002": null,
+                "customfield_10003": null,
+                "customfield_10004": null,
+                "environment": null,
+                "duedate": "2023-10-28",
+                "progress": {
+                    "progress": 0,
+                    "total": 0
+                },
+                "votes": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/issue/KAN-2/votes",
+                    "votes": 0,
+                    "hasVoted": false
+                }
+            }
+        },
+        {
+            "expand": "operations,versionedRepresentations,editmeta,changelog,customfield_10010.requestTypePractice,renderedFields",
+            "id": "10000",
+            "self": "https://tskmstr.atlassian.net/rest/api/3/issue/10000",
+            "key": "KAN-1",
+            "fields": {
+                "statuscategorychangedate": "2023-10-01T09:40:36.531+1100",
+                "issuetype": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/issuetype/10002",
+                    "id": "10002",
+                    "description": "Epics track collections of related bugs, stories, and tasks.",
+                    "iconUrl": "https://tskmstr.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10307?size=medium",
+                    "name": "Epic",
+                    "subtask": false,
+                    "avatarId": 10307,
+                    "entityId": "d7de3e28-8085-4009-9878-6288c6bba044",
+                    "hierarchyLevel": 1
+                },
+                "timespent": null,
+                "customfield_10030": null,
+                "project": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/project/10000",
+                    "id": "10000",
+                    "key": "KAN",
+                    "name": "My Kanban Project",
+                    "projectTypeKey": "software",
+                    "simplified": true,
+                    "avatarUrls": {
+                        "48x48": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413",
+                        "24x24": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413?size=small",
+                        "16x16": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413?size=xsmall",
+                        "32x32": "https://tskmstr.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10413?size=medium"
+                    }
+                },
+                "customfield_10032": null,
+                "customfield_10033": null,
+                "fixVersions": [],
+                "aggregatetimespent": null,
+                "resolution": null,
+                "customfield_10027": null,
+                "customfield_10028": null,
+                "customfield_10029": null,
+                "resolutiondate": null,
+                "workratio": -1,
+                "lastViewed": null,
+                "watches": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/issue/KAN-1/watchers",
+                    "watchCount": 1,
+                    "isWatching": true
+                },
+                "created": "2023-10-01T09:40:35.888+1100",
+                "customfield_10020": null,
+                "customfield_10021": null,
+                "customfield_10022": null,
+                "priority": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/priority/3",
+                    "iconUrl": "https://tskmstr.atlassian.net/images/icons/priorities/medium.svg",
+                    "name": "Medium",
+                    "id": "3"
+                },
+                "customfield_10023": null,
+                "customfield_10024": null,
+                "customfield_10025": null,
+                "customfield_10026": null,
+                "labels": [
+                    "Example-label"
+                ],
+                "customfield_10016": null,
+                "customfield_10017": "teal",
+                "customfield_10018": {
+                    "hasEpicLinkFieldDependency": false,
+                    "showField": false,
+                    "nonEditableReason": {
+                        "reason": "PLUGIN_LICENSE_ERROR",
+                        "message": "The Parent Link is only available to Jira Premium users."
+                    }
+                },
+                "customfield_10019": "0|hzzzzz:",
+                "aggregatetimeoriginalestimate": null,
+                "timeestimate": null,
+                "versions": [],
+                "issuelinks": [],
+                "assignee": null,
+                "updated": "2023-10-01T09:40:36.354+1100",
+                "status": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/status/10000",
+                    "description": "",
+                    "iconUrl": "https://tskmstr.atlassian.net/",
+                    "name": "To Do",
+                    "id": "10000",
+                    "statusCategory": {
+                        "self": "https://tskmstr.atlassian.net/rest/api/3/statuscategory/2",
+                        "id": 2,
+                        "key": "new",
+                        "colorName": "blue-gray",
+                        "name": "To Do"
+                    }
+                },
+                "components": [],
+                "timeoriginalestimate": null,
+                "description": {
+                    "version": 1,
+                    "type": "doc",
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": "Add epic description here... For example: \"Reimagining ABC software's sign-up experience\"."
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "customfield_10010": null,
+                "customfield_10014": null,
+                "customfield_10015": "2023-10-07",
+                "customfield_10005": null,
+                "customfield_10006": null,
+                "customfield_10007": null,
+                "security": null,
+                "customfield_10008": null,
+                "aggregatetimeestimate": null,
+                "customfield_10009": null,
+                "summary": "[Epic: Add epic summary]",
+                "creator": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/user?accountId=712020%3A000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "accountId": "712020:000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "emailAddress": "ramon@thebuckland.com",
+                    "avatarUrls": {
+                        "48x48": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "24x24": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "16x16": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "32x32": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png"
+                    },
+                    "displayName": "Ramon Buckland",
+                    "active": true,
+                    "timeZone": "Australia/Sydney",
+                    "accountType": "atlassian"
+                },
+                "subtasks": [],
+                "reporter": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/user?accountId=712020%3A000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "accountId": "712020:000eb623-631c-4afb-a500-bdb1a5e338a5",
+                    "emailAddress": "ramon@thebuckland.com",
+                    "avatarUrls": {
+                        "48x48": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "24x24": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "16x16": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png",
+                        "32x32": "https://secure.gravatar.com/avatar/8c5a5c5a8a0968470f750449b256bb80?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRB-6.png"
+                    },
+                    "displayName": "Ramon Buckland",
+                    "active": true,
+                    "timeZone": "Australia/Sydney",
+                    "accountType": "atlassian"
+                },
+                "aggregateprogress": {
+                    "progress": 0,
+                    "total": 0
+                },
+                "customfield_10001": null,
+                "customfield_10002": null,
+                "customfield_10003": null,
+                "customfield_10004": null,
+                "environment": null,
+                "duedate": "2023-12-02",
+                "progress": {
+                    "progress": 0,
+                    "total": 0
+                },
+                "votes": {
+                    "self": "https://tskmstr.atlassian.net/rest/api/3/issue/KAN-1/votes",
+                    "votes": 0,
+                    "hasVoted": false
+                }
+            }
+        }
+    ]
+}

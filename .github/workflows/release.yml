@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [x86_64-linux, aarch64-linux, aarch64-macos, x86_64-macos, x86_64-windows, aarch64-windows, x86_64-freebsd]
+        build: [x86_64-linux, aarch64-linux,  x86_64-macos, x86_64-windows]
         include:
 
         - build: x86_64-linux
@@ -39,13 +39,14 @@ jobs:
           cross: false
           artifact_name: tskmstr
           asset_name: tskmstr-osx-amd64
-        - build: aarch64-macos
-          os: macos-latest
-          rust: nightly
-          cross: true
-          target: aarch64-apple-darwin
-          artifact_name: tskmstr
-          asset_name: tskmstr-osx-aarch64          
+        # TODO ? FIX - not sure why it doesn't build
+        # - build: aarch64-macos
+        #   os: macos-latest
+        #   rust: nightly
+        #   cross: true
+        #   target: aarch64-apple-darwin
+        #   artifact_name: tskmstr
+        #   asset_name: tskmstr-osx-aarch64          
 
         - build: x86_64-windows
           os: windows-2019
@@ -54,21 +55,21 @@ jobs:
           cross: false
           artifact_name: tskmstr.exe
           asset_name: tskmstr-windows-amd64
-        - build: aarch64-windows
-          os: windows-2019
-          rust: nightly
-          target: aarch64-pc-windows-msvc
-          cross: true
-          artifact_name: tskmstr.exe
-          asset_name: tskmstr-windows-aarch64
+        # - build: aarch64-windows
+        #   os: windows-2019
+        #   rust: nightly
+        #   target: aarch64-pc-windows-msvc
+        #   cross: true
+        #   artifact_name: tskmstr.exe
+        #   asset_name: tskmstr-windows-aarch64
 
-        - build: x86_64-freebsd
-          os: ubuntu-22.04
-          rust: nightly
-          cross: true
-          target: x86_64-unknown-freebsd
-          artifact_name: tskmstr
-          asset_name: tskmstr-freebsd-amd64
+        # - build: x86_64-freebsd
+        #   os: ubuntu-22.04
+        #   rust: nightly
+        #   cross: true
+        #   target: x86_64-unknown-freebsd
+        #   artifact_name: tskmstr
+        #   asset_name: tskmstr-freebsd-amd64
     steps:
       - name: Checkout Source
         uses: actions/checkout@master

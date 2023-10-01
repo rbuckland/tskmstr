@@ -1,5 +1,6 @@
-use serde::Deserialize;
 use colored::Color;
+use serde::Deserialize;
+use serde_inline_default::serde_inline_default;
 use std::str::FromStr;
 
 use crate::{
@@ -21,20 +22,24 @@ pub struct GitLabIssue {
     pub labels: Vec<GitLabLabel>,
 }
 
+#[serde_inline_default]
 #[derive(Debug, Deserialize, Clone)]
 pub struct GitLabConfig {
-    pub token: Option<String>,
     pub credential: Option<CredentialKeyringEntry>,
+
+    #[serde_inline_default("https://gitlab.com".to_string())]
+    pub endpoint: String,
+
+    /// A String ID, used for messages
+    #[serde_inline_default("gitlab.com".to_string())]
+    pub provider_id: String,
+
     pub repositories: Vec<GitLabRepository>,
 }
 
 impl HasSecretToken for GitLabConfig {
     fn task_provider_id(&self) -> String {
-        "gitlab.com".to_string()
-    }
-
-    fn token(&self) -> Option<String> {
-        self.token.clone()
+        self.provider_id.clone()
     }
 
     fn credential(&self) -> Option<CredentialKeyringEntry> {
