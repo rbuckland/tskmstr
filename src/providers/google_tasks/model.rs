@@ -14,16 +14,6 @@ pub struct GitHubLabel {
     pub name: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct GitHubIssue {
-    pub number: u32,
-    pub title: String,
-    pub html_url: String,
-
-    // Use the new GitLabLabel type for tags
-    pub labels: Vec<GitHubLabel>,
-}
-
 #[serde_inline_default]
 #[derive(Debug, Deserialize, Clone)]
 pub struct GoogleTaskConfig {
@@ -41,7 +31,6 @@ pub struct GoogleTaskConfig {
 }
 
 impl HasSecretToken for GoogleTaskConfig {
-
     fn task_provider_id(&self) -> String {
         self.provider_id.clone()
     }
@@ -52,24 +41,32 @@ impl HasSecretToken for GoogleTaskConfig {
 }
 
 // Struct representing a task list in Google Tasks
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct GoogleTaskList {
     pub id: String,
     pub title: String,
+
+    /// In output, Where color is appropriate, together with the ID, this will be used
+    pub color: String,
+
+    /// Defauls configuration
+    pub defaults: Option<Defaults>,
 }
 
 // Struct representing a task in Google Tasks
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct GoogleTask {
     pub id: String,
     pub title: String,
+    
+    #[serde(rename(deserialize = "selfLink"))]
+    pub url: String,
     pub notes: Option<String>,
     pub due: Option<String>,
     pub completed: Option<bool>,
 }
 
 impl IssueTaskRepository for GoogleTaskList {
-
     fn defaults(&self) -> Option<Defaults> {
         self.defaults.clone()
     }

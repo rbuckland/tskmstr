@@ -8,7 +8,7 @@ use reqwest::{
 
 use crate::providers::common::{credentials::HasSecretToken, model::Issue};
 use crate::providers::google_tasks::model::GoogleTaskConfig;
-use crate::providers::{common::model::Label, google_tasks::model::GoogleTaskIssue};
+use crate::providers::{common::model::Label, google_tasks::model::GoogleTask};
 
 use serde_json::json;
 
@@ -89,23 +89,19 @@ pub async fn collect_tasks_from_google_tasks(
         if response.status().is_success() {
             let body = response.text().await?;
 
-            let google_tasks_issues: Vec<GoogleTaskIssue> = serde_json::from_str(&body)?;
+            let google_tasks_issues: Vec<GoogleTask> = serde_json::from_str(&body)?;
             let issues = google_tasks_issues.into_iter().map(|google_tasks_issue| Issue {
-                id: format!("{}/{}", task_list.id, google_tasks_issue.number),
+                id: format!("{}/{}", task_list.id, google_tasks_issue.id),
                 title: google_tasks_issue.title,
-                html_url: google_tasks_issue.html_url,
-                tags: google_tasks_issue
-                    .labels
-                    .into_iter()
-                    .map(|l| Label { name: l.name })
-                    .collect(),
+                html_url: google_tasks_issue.url,
+                tags: Vec::new() // google tasks have no labels
             });
             all_issues.extend(issues); // Add the collected issues to the vector
         } else {
             println!(
                 "Error: Unable to fetch issues for {}/{}. Status: {:?}",
-                task_list.owner,
-                task_list.task_list,
+                task_list.id,
+                task_list.title,
                 response.status()
             );
         }
