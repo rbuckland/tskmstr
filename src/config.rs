@@ -7,7 +7,7 @@ use serde::Deserialize;
 
 use crate::providers::github::model::{GitHubConfig, GitHubRepository};
 use crate::providers::gitlab::model::{GitLabConfig, GitLabRepository};
-use crate::providers::jira::model::JiraConfig;
+use crate::providers::jira::model::{JiraConfig, JiraProject};
 
 
 
@@ -37,8 +37,9 @@ pub struct LabelConfig {
 /// there is only one default "place" we will create tasks into
 #[derive(Debug, Deserialize, Clone)]
 pub enum TaskIssueProvider {
-    GitHub(GitHubRepository),
-    GitLab(GitLabRepository),
+    GitHub(GitHubConfig, GitHubRepository),
+    GitLab(GitLabConfig, GitLabRepository),
+    Jira(JiraConfig, JiraProject),
 }
 
 /// Configure a task/issue source as default for some behaviour
@@ -102,6 +103,13 @@ impl AppConfig {
             }
         }
 
+        // Check if the GitLab configuration is present
+        for jc in &self.jira {
+            for p in &jc.projects {
+                provider_ids.push(p.id.clone());
+            }
+        }
+        
         provider_ids
     }
 
@@ -116,7 +124,7 @@ impl AppConfig {
                 .iter()
                 .find(|&repo| f(Box::new(repo)))
             {
-                return Ok(Some(TaskIssueProvider::GitHub(default_repo.clone())));
+                return Ok(Some(TaskIssueProvider::GitHub(github_config.clone(), default_repo.clone())));
             }
         }
 
@@ -126,10 +134,19 @@ impl AppConfig {
                 .iter()
                 .find(|&repo| f(Box::new(repo)))
             {
-                return Ok(Some(TaskIssueProvider::GitLab(default_repo.clone())));
+                return Ok(Some(TaskIssueProvider::GitLab(gitlab_config.clone(), default_repo.clone())));
             }
         }
 
+        for jc in &self.jira {
+            if let Some(found_jira_project_default) = jc
+                .projects
+                .iter()
+                .find(|&project| f(Box::new(project)))
+                {
+                    return Ok(Some(TaskIssueProvider::Jira(jc.clone(), found_jira_project_default.clone())));
+                }         
+        }
 
         Ok(None)
     }

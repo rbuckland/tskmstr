@@ -1,3 +1,4 @@
+use log::{debug, error, info, warn};
 use std::collections::HashSet;
 
 use reqwest::{
@@ -19,6 +20,47 @@ pub fn construct_github_header(token: &str) -> HeaderMap {
     headers.insert(AUTHORIZATION, format!("Bearer {}", token).parse().unwrap());
     headers.insert(ACCEPT, "application/vnd.github.v3+json".parse().unwrap());
     return headers;
+}
+
+pub async fn close_task_github(
+    github_config: &GitHubConfig,
+    repo_config: &GitHubRepository,
+    issue_id: &String,
+) -> Result<(), anyhow::Error> {
+
+    let client = Client::new();
+
+    let url = format!(
+        "https://api.github.com/repos/{}/{}/issues/{}",
+        repo_config.owner, repo_config.repo, &issue_id
+    );
+    debug!("github: will close {}", url);
+
+    let response = client
+        .patch(&url)
+        .headers(construct_github_header(&github_config.get_token()))
+        .json(&serde_json::json!({
+            "state": "closed"
+        }))
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        println!(
+            "Task {} closed in GitHub repo: {}/{}",
+            issue_id, repo_config.owner, repo_config.repo
+        );
+    } else {
+        println!(
+            "Error: Unable to close task {} in GitHub repo {}/{}. Status: {:?}",
+            issue_id,
+            repo_config.owner,
+            repo_config.repo,
+            response.status()
+        );
+    }
+
+    Ok(())
 }
 
 pub async fn collect_tasks_from_github(

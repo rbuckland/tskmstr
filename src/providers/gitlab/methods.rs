@@ -22,11 +22,46 @@ pub fn construct_gitlab_header(token: &str) -> HeaderMap {
     return headers;
 }
 
+pub async fn close_task_gitlab(
+    gitlab_config: &GitLabConfig,
+    repo_config: &GitLabRepository,
+    issue_id: &String,
+) -> Result<(), anyhow::Error> {
+    let client: Client = Client::new();
+
+    let url = format!(
+        "{}/api/v4/projects/{}/issues/{}?state_event=close",
+        &gitlab_config.endpoint, repo_config.project_id, &issue_id
+    );
+    debug!("gitlab: will close {}", url);
+
+    let response = client
+        .put(&url)
+        .headers(construct_gitlab_header(&gitlab_config.get_token()))
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        println!(
+            "Task {} closed in GitLab project: {}",
+            issue_id, repo_config.project_id
+        );
+    } else {
+        println!(
+            "Error: Unable to close {} issue in GitLab project: {}. Status: {:?}",
+            issue_id,
+            repo_config.project_id,
+            response.status()
+        );
+    }
+    Ok(())
+}
+
 pub async fn collect_tasks_from_gitlab(
     gitlab_config: &GitLabConfig,
     provider_id: &Option<String>,
 ) -> Result<Vec<Issue>, anyhow::Error> {
-    let client = Client::new();
+    let client: Client = Client::new();
     let mut all_issues = Vec::new();
 
     for (_idx, repo) in gitlab_config
