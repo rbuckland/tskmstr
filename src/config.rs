@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 use crate::providers::github::model::{GitHubConfig, GitHubRepository};
 use crate::providers::gitlab::model::{GitLabConfig, GitLabRepository};
+use crate::providers::jira::model::JiraConfig;
 
 
 
@@ -23,6 +24,8 @@ pub struct AppConfig {
 
     #[serde(rename = "gitlab.com")]
     pub gitlab_com: Option<GitLabConfig>,
+
+    pub jira: Vec<JiraConfig>,
 
 }
 #[derive(Debug, Deserialize, Clone)]
@@ -145,6 +148,7 @@ impl Default for AppConfig {
             debug: None,
             github_com: None,
             gitlab_com: None,
+            jira: Vec::new(),
             labels: LabelConfig { priority_labels: HashSet::new(), priority_timeframe: None },
             colors: Colors {
                 issue_id: "magenta".to_string(),
