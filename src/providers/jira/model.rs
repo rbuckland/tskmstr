@@ -8,36 +8,61 @@ use crate::{
     providers::common::credentials::{CredentialKeyringEntry, HasSecretToken},
 };
 
-// New type for GitLab labels
 #[derive(Debug, Deserialize, Clone)]
-pub struct GitLabLabel(pub String);
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct GitLabIssue {
-    pub iid: u32,
-    pub title: String,
-    pub web_url: String,
-
-    // Use the new GitLabLabel type for tags
-    pub labels: Vec<GitLabLabel>,
+pub struct JiraResult {
+    pub issues: Vec<JiraIssue>,
 }
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JiraIssue {
+
+    #[serde(rename(deserialize = "key"))]    
+    pub id: String,
+
+    #[serde(rename(deserialize = "self"))]    
+    pub url: String,
+    pub fields: JiraFields,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JiraFields {
+    pub summary: String,
+    pub description: Option<JiraDescription>,
+    pub labels: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JiraDescription {
+    pub content: Vec<JiraDescriptionContent>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JiraDescriptionContent {
+    pub content: Vec<JiraDescriptionContentItem>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JiraDescriptionContentItem {
+    pub text: String,
+}
+
 
 #[serde_inline_default]
 #[derive(Debug, Deserialize, Clone)]
-pub struct GitLabConfig {
+pub struct JiraConfig {
     pub credential: Option<CredentialKeyringEntry>,
 
-    #[serde_inline_default("https://gitlab.com".to_string())]
+    // Required Value with your Jira endpoint URL
     pub endpoint: String,
-    
+
     /// A String ID, used for messages
-    #[serde_inline_default("gitlab.com".to_string())]
+    #[serde_inline_default("jira".to_string())]
     pub provider_id: String,
 
-    pub repositories: Vec<GitLabRepository>,
+    pub projects: Vec<JiraProject>,
 }
 
-impl HasSecretToken for GitLabConfig {
+impl HasSecretToken for JiraConfig {
     fn task_provider_id(&self) -> String {
         self.provider_id.clone()
     }
@@ -48,7 +73,7 @@ impl HasSecretToken for GitLabConfig {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct GitLabRepository {
+pub struct JiraProject {
     /// a unique character across the entire repository config
     /// which will be used for display and CMD line choices
     /// If an ID is not set, an auto generated one will be created
@@ -57,15 +82,14 @@ pub struct GitLabRepository {
     /// In output, Where color is appropriate, together with the ID, this will be used
     pub color: String,
 
-    /// the gitlab project ID, this is either the "number", or
-    /// the string. If the gitlab project is a subgroup, it will look like parent%2Fchild
-    pub project_id: String,
+    /// the Jira project key, e.g., "PROJ123"
+    pub project_key: String,
 
     /// Defauls configuration
     pub defaults: Option<Defaults>,
 }
 
-impl ProviderIface for GitLabRepository {
+impl ProviderIface for JiraProject {
     fn defaults(&self) -> Option<Defaults> {
         self.defaults.clone()
     }
