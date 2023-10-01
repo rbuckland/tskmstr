@@ -3,6 +3,7 @@ use crate::providers::github::methods::collect_tasks_from_github;
 
 use crate::providers::gitlab::methods::collect_tasks_from_gitlab;
 
+use crate::providers::jira::methods::collect_tasks_from_jira;
 use crate::{config::AppConfig, providers::common::model::Issue};
 use colored::{Color, Colorize};
 use std::str::FromStr;
@@ -159,6 +160,10 @@ pub async fn aggregate_and_display_all_tasks(
         let gitlab_tasks = collect_tasks_from_gitlab(gitlab_config, &provider_id).await?;
         all_issues.extend(gitlab_tasks);
     }
+
+    let jira_tasks = collect_tasks_from_jira(&config.jira, &provider_id).await?;
+    all_issues.extend(jira_tasks);
+
 
     let _ = display_tasks_in_table(&all_issues, &colors, &config.labels.priority_labels);
 

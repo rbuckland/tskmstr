@@ -2,6 +2,7 @@
 #![feature(unboxed_closures)]
 
 use anyhow::Result;
+use anyhow::anyhow;
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
 
@@ -105,6 +106,45 @@ struct TagOperationParameters {
     tags: Vec<String>,
 }
 
+
+async fn do_work(args: &Cli, config: &AppConfig) -> Result<(),anyhow::Error> {
+
+    // Initialize your logger
+    if args.debug || config.debug.is_some() {
+        // Set up the logger with the desired log level
+        simple_logger::init_with_level(log::Level::Debug).expect("Failed to initialize logger");
+    } else {
+        // Initialize the logger with a default log level
+        simple_logger::init_with_level(log::Level::Info).expect("Failed to initialize logger");
+    }
+
+    let colors = &config.colors;
+    match &args.cmd {
+        Some(Command::Add {
+            title,
+            details,
+            tags,
+        }) => add_new_task(&args.provider_id, &config, &title, &details, &tags).await?,
+        Some(Command::Close(close_cmd)) => {
+            close_task( &config, close_cmd.id.clone()).await?;
+        }
+        Some(Command::Tags(TagsCommand::Add(tag_additions))) => {
+            let tag_set: &HashSet<String> = &tag_additions.tags.clone().into_iter().collect();
+            add_tags_to_task(&config, tag_additions.id.clone(), &tag_set).await?;
+        }
+        Some(Command::Tags(TagsCommand::Remove(tag_removals))) => {
+            let tag_set: &HashSet<String> = &tag_removals.tags.clone().into_iter().collect();
+            remove_tags_from_task(&config, tag_removals.id.clone(), &tag_set).await?;
+        }
+        Some(Command::Providers) => {
+            list_providers(&config).await?;
+        }
+        None => aggregate_and_display_all_tasks(&args.provider_id, &config, &colors).await?,
+    };
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let args = Cli::parse();
@@ -118,45 +158,11 @@ async fn main() -> Result<(), anyhow::Error> {
             config_dir.push("/tskmstr.config.yml");
             config_dir
         }
-    
-    
     };
+    let filename = config_file.clone().into_string().unwrap();
 
-    let contents = std::fs::read_to_string(config_file)?;
-    let config: AppConfig = serde_yaml::from_str(&contents)?;
+    let contents = std::fs::read_to_string(&config_file).expect(format!("Failed to open file {}",filename).as_str());
+    let config: AppConfig = serde_yaml::from_str(&contents).expect(format!("Failed to load file {}",filename).as_str());
+    do_work(&args, &config).await
 
-    // Initialize your logger
-    if args.debug || config.debug.is_some() {
-        // Set up the logger with the desired log level
-        simple_logger::init_with_level(log::Level::Debug).expect("Failed to initialize logger");
-    } else {
-        // Initialize the logger with a default log level
-        simple_logger::init_with_level(log::Level::Info).expect("Failed to initialize logger");
-    }
-
-    let colors = &config.colors;
-    match args.cmd {
-        Some(Command::Add {
-            title,
-            details,
-            tags,
-        }) => add_new_task(&args.provider_id, &config, &title, &details, &tags).await?,
-        Some(Command::Close(close_cmd)) => {
-            close_task( &config, close_cmd.id.clone()).await?;
-        }
-        Some(Command::Tags(TagsCommand::Add(tag_additions))) => {
-            let tag_set: &HashSet<String> = &tag_additions.tags.into_iter().collect();
-            add_tags_to_task(&config, tag_additions.id.clone(), &tag_set).await?;
-        }
-        Some(Command::Tags(TagsCommand::Remove(tag_removals))) => {
-            let tag_set: &HashSet<String> = &tag_removals.tags.into_iter().collect();
-            remove_tags_from_task(&config, tag_removals.id.clone(), &tag_set).await?;
-        }
-        Some(Command::Providers) => {
-            list_providers(&config).await?;
-        }
-        None => aggregate_and_display_all_tasks(&args.provider_id, &config, &colors).await?,
-    };
-
-    Ok(())
 }
