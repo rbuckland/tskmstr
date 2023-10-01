@@ -5,7 +5,7 @@
 | Github | ✅ | ✅ | ✅ |✅ | | ✅ |  
 | Gitlab | ✅ | ✅ | ✅ |✅ | | ✅ |
 | Bitbucket | 
-| Jira | 
+| Jira | ✅ | ✅ | ✅ |✅ | | ✅ |
 | Office365 (Todo Items) | 
 | Office365 (Teams Tasks) | 
 | Google Tasks | 

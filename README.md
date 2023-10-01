@@ -16,8 +16,8 @@
   - [Configuration](#configuration)
   - [Usage](#usage)
     - [Adding a Task](#adding-a-task)
-  - [Closing a Task](#closing-a-task)
-  - [Listing Tasks](#listing-tasks)
+    - [Closing a Task](#closing-a-task)
+    - [Listing Tasks](#listing-tasks)
   - [Adding and Removing Labels](#adding-and-removing-labels)
   - [Command Reference](#command-reference)
   - [Features](#features)
@@ -32,6 +32,7 @@
 It aggregates your TODO/Task/Work items from
 - github issues
 - gitlab issues
+- jira issues
 
 You can use a private repo on gitlab, or github to store your personal **TODO** items, and aggregate these with opensource, and private projects you contribute and work on.
 
@@ -79,9 +80,17 @@ To use **tskmstr**, you'll need to build it from source. Follow these steps:
 
 ## Configuration
 
-Before using **tskmstr**, you need to configure it with your GitHub and/or GitLab credentials. **tskmstr** reads your credentials securely from your OS keyring.
+Before using **tskmstr**, you need to configure it with your GitHub, Jira and/or GitLab credentials. **tskmstr** reads your credentials securely from your OS keyring.
 
-The configuration is stored in a YAML file, which should look like this:
+Refer to the sample config [sample-config](sample/tskmstr.config.yml)
+
+This config file needs to go into:
+
+- Linux - `~/.config/tskmstr/tskmstr.config.yml`
+- Windows - `%LOCALAPPDATA%/tskmstr/tskmstr.config.yml`
+- Mac OSX - `~/Library/Preferences/tskmstr/tskmstr.config.yml`
+
+The configuration is a YAML file, which should look like below:
 
 
 1. Create a new file `~/.config/tskmstr/tskmstr.config.yml`
@@ -138,12 +147,20 @@ keyring set github.com key_username_in_keyring
 keyring set gitlab.com key_username_in_keyring
 ```
 
+For jira, it needs to look like 
+
+```
+keyring set <your-jira-instance> <jirs-username>
+# example
+keyring set special.atlassian.net user@foobar.com
+```
+
 **note, on Ubuntu the `keyring` CLI tool is provided by `python3-keyring`
 
 Now you're ready to start using tskmstr!
 
 ```sh
-t 
+tskmstr
 ```
 
 Example output looks like below. 
@@ -246,6 +263,8 @@ You can add and remove labels from a task using the tag add and tag remove comma
 ```
 tskmstr tags add <issue_id> tag1 tag2 tag3
 tskmstr tags remove <issue_id> tag1 tag2 tag3
+# example: 
+tskmstr tags remove J/PROJ-2 this-label that-label another-label
 ```
 
 ## Command Reference
@@ -255,6 +274,8 @@ tskmstr tags remove <issue_id> tag1 tag2 tag3
     list: List all tasks/issues, grouped by labels and priority.
     tags add: Add tags to a task.
     tags remove: Remove tags from a task.
+    providers: list the providers configured
+    jira-transitions <ISSUE-ID> # special required for configuring jira
 
 
 ## Features
