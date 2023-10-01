@@ -4,23 +4,10 @@ use serde_inline_default::serde_inline_default;
 use std::str::FromStr;
 
 use crate::{
-    config::{Defaults, ProviderIface},
+    config::{Defaults, IssueTaskRepository},
     providers::common::credentials::{CredentialKeyringEntry, HasSecretToken},
 };
 
-// New type for GitLab labels
-#[derive(Debug, Deserialize, Clone)]
-pub struct GitLabLabel(pub String);
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct GitLabIssue {
-    pub iid: u32,
-    pub title: String,
-    pub web_url: String,
-
-    // Use the new GitLabLabel type for tags
-    pub labels: Vec<GitLabLabel>,
-}
 
 #[serde_inline_default]
 #[derive(Debug, Deserialize, Clone)]
@@ -47,6 +34,21 @@ impl HasSecretToken for GitLabConfig {
     }
 }
 
+
+// New type for GitLab labels
+#[derive(Debug, Deserialize, Clone)]
+pub struct GitLabLabel(pub String);
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct GitLabIssue {
+    pub iid: u32,
+    pub title: String,
+    pub web_url: String,
+
+    // Use the new GitLabLabel type for tags
+    pub labels: Vec<GitLabLabel>,
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct GitLabRepository {
     /// a unique character across the entire repository config
@@ -65,7 +67,7 @@ pub struct GitLabRepository {
     pub defaults: Option<Defaults>,
 }
 
-impl ProviderIface for GitLabRepository {
+impl IssueTaskRepository for GitLabRepository {
     fn defaults(&self) -> Option<Defaults> {
         self.defaults.clone()
     }

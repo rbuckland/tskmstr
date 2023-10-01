@@ -1,4 +1,4 @@
-use log::{debug};
+use log::debug;
 use std::collections::HashSet;
 
 use reqwest::{
@@ -63,51 +63,50 @@ pub async fn close_task_github(
 }
 
 pub async fn collect_tasks_from_github(
-    github_config: &GitHubConfig,
+    github_config: &Vec<GitHubConfig>,
     provider_id: &Option<String>,
 ) -> Result<Vec<Issue>, anyhow::Error> {
     let client = Client::new();
     let mut all_issues = Vec::new(); // Create a vector to collect all issues
 
-    for (_idx, repo) in github_config
-        .repositories
-        .iter()
-        .filter(|&r| provider_id.is_none() || provider_id.as_deref().is_some_and(|p| r.id == p))
-        .enumerate()
-    {
-        let url = format!(
-            "{}/repos/{}/{}/issues",
-            github_config.endpoint, repo.owner, repo.repo
-        );
+    for g in github_config {
+        for (_idx, repo) in g
+            .repositories
+            .iter()
+            .filter(|&r| provider_id.is_none() || provider_id.as_deref().is_some_and(|p| r.id == p))
+            .enumerate()
+        {
+            let url = format!("{}/repos/{}/{}/issues", g.endpoint, repo.owner, repo.repo);
 
-        let response = client
-            .get(&url)
-            .headers(construct_github_header(&github_config.get_token()))
-            .send()
-            .await?;
+            let response = client
+                .get(&url)
+                .headers(construct_github_header(&g.get_token()))
+                .send()
+                .await?;
 
-        if response.status().is_success() {
-            let body = response.text().await?;
+            if response.status().is_success() {
+                let body = response.text().await?;
 
-            let github_issues: Vec<GitHubIssue> = serde_json::from_str(&body)?;
-            let issues = github_issues.into_iter().map(|github_issue| Issue {
-                id: format!("{}/{}", repo.id, github_issue.number),
-                title: github_issue.title,
-                html_url: github_issue.html_url,
-                tags: github_issue
-                    .labels
-                    .into_iter()
-                    .map(|l| Label { name: l.name })
-                    .collect(),
-            });
-            all_issues.extend(issues); // Add the collected issues to the vector
-        } else {
-            println!(
-                "Error: Unable to fetch issues for {}/{}. Status: {:?}",
-                repo.owner,
-                repo.repo,
-                response.status()
-            );
+                let github_issues: Vec<GitHubIssue> = serde_json::from_str(&body)?;
+                let issues = github_issues.into_iter().map(|github_issue| Issue {
+                    id: format!("{}/{}", repo.id, github_issue.number),
+                    title: github_issue.title,
+                    html_url: github_issue.html_url,
+                    tags: github_issue
+                        .labels
+                        .into_iter()
+                        .map(|l| Label { name: l.name })
+                        .collect(),
+                });
+                all_issues.extend(issues); // Add the collected issues to the vector
+            } else {
+                println!(
+                    "Error: Unable to fetch issues for {}/{}. Status: {:?}",
+                    repo.owner,
+                    repo.repo,
+                    response.status()
+                );
+            }
         }
     }
     Ok(all_issues) // Return the vector of collected issues
