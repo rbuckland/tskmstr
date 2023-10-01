@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use colored::Color;
+use serde::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
 use std::str::FromStr;
 
@@ -15,11 +15,10 @@ pub struct JiraResult {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct JiraIssue {
-
-    #[serde(rename(deserialize = "key"))]    
+    #[serde(rename(deserialize = "key"))]
     pub id: String,
 
-    #[serde(rename(deserialize = "self"))]    
+    #[serde(rename(deserialize = "self"))]
     pub url: String,
     pub fields: Option<JiraFields>,
 }
@@ -37,7 +36,6 @@ pub struct JiraIssueType {
     pub name: String,
 }
 
-
 #[derive(Debug, Deserialize, Clone)]
 pub struct JiraDescription {
     pub content: Vec<JiraDescriptionContent>,
@@ -52,7 +50,6 @@ pub struct JiraDescriptionContent {
 pub struct JiraDescriptionContentItem {
     pub text: String,
 }
-
 
 #[serde_inline_default]
 #[derive(Debug, Deserialize, Clone)]
@@ -96,6 +93,9 @@ pub struct JiraProject {
     /// The default issue to create
     #[serde_inline_default("Task".to_string())]
     pub default_issue_type: String,
+
+    #[serde_inline_default("1".to_string())]
+    pub close_transition_id: String,
 
     /// Defauls configuration
     pub defaults: Option<Defaults>,
