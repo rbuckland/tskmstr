@@ -37,9 +37,7 @@ fn group_tasks_by_labels(
                 labels_except_priority.join(", ")
             };
 
-            acc.entry(group_key)
-                .or_default()
-                .push(issue.clone());
+            acc.entry(group_key).or_default().push(issue.clone());
             acc
         })
 }
@@ -151,15 +149,11 @@ pub async fn aggregate_and_display_all_tasks(
 ) -> Result<(), anyhow::Error> {
     let mut all_issues = Vec::new();
 
-    if let Some(github_config) = &config.github_com {
-        let github_tasks = collect_tasks_from_github(github_config, provider_id).await?;
-        all_issues.extend(github_tasks);
-    }
+    let github_tasks = collect_tasks_from_github(&config.github_com, provider_id).await?;
+    all_issues.extend(github_tasks);
 
-    if let Some(gitlab_config) = &config.gitlab_com {
-        let gitlab_tasks = collect_tasks_from_gitlab(gitlab_config, provider_id).await?;
-        all_issues.extend(gitlab_tasks);
-    }
+    let gitlab_tasks = collect_tasks_from_gitlab(&config.gitlab_com, provider_id).await?;
+    all_issues.extend(gitlab_tasks);
 
     let jira_tasks = collect_tasks_from_jira(&config.jira, provider_id).await?;
     all_issues.extend(jira_tasks);
@@ -170,15 +164,22 @@ pub async fn aggregate_and_display_all_tasks(
 }
 
 pub async fn list_providers(config: &AppConfig) -> Result<(), anyhow::Error> {
-    if let Some(github_config) = &config.github_com {
-        for x in &github_config.repositories {
-            println!("{} - github.com/{}/{}", x.id, x.owner, x.repo);
+    
+    for g in &config.github_com {
+        for x in &g.repositories {
+            println!("{} - {}/{}/{}", x.id, g.endpoint, x.owner, x.repo);
         }
     }
 
-    if let Some(gitlab_config) = &config.gitlab_com {
-        for x in &gitlab_config.repositories {
-            println!("{} - gitlab.com/{}", x.id, x.project_id);
+    for g in &config.gitlab_com {
+        for x in &g.repositories {
+            println!("{} - {}/{}", x.id, g.endpoint, x.project_id);
+        }
+    }
+
+    for g in &config.jira {
+        for x in &g.projects {
+            println!("{} - {}/{}", x.id, g.endpoint, x.id);
         }
     }
 

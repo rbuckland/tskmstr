@@ -26,21 +26,22 @@ pub struct GitHubIssue {
 
 #[serde_inline_default]
 #[derive(Debug, Deserialize, Clone)]
-pub struct GitHubConfig {
+pub struct GoogleTaskConfig {
     pub credential: Option<CredentialKeyringEntry>,
 
-    // The github endpoint URL
-    #[serde_inline_default("https://api.github.com".to_string())]
+    // The google tasks API
+    #[serde_inline_default("https://tasks.googleapis.com".to_string())]
     pub endpoint: String,
 
     /// A String ID, used for messages
-    #[serde_inline_default("github.com".to_string())]
+    #[serde_inline_default("google_tasks".to_string())]
     pub provider_id: String,
 
-    pub repositories: Vec<GitHubRepository>,
+    pub tasklists: Vec<GoogleTaskList>,
 }
 
-impl HasSecretToken for GitHubConfig {
+impl HasSecretToken for GoogleTaskConfig {
+
     fn task_provider_id(&self) -> String {
         self.provider_id.clone()
     }
@@ -50,27 +51,25 @@ impl HasSecretToken for GitHubConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct GitHubRepository {
-    /// a unique character across the entire repository config
-    /// which will be used for display and CMD line choices
-    /// If an ID is not set, an auto generated one will be created
+// Struct representing a task list in Google Tasks
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleTaskList {
     pub id: String,
-
-    /// In output, Where color is appropriate, together with the ID, this will be used
-    pub color: String,
-
-    /// the github Owner of the repository
-    pub owner: String,
-
-    /// the github repository name
-    pub repo: String,
-
-    /// Defauls configuration
-    pub defaults: Option<Defaults>,
+    pub title: String,
 }
 
-impl IssueTaskRepository for GitHubRepository {
+// Struct representing a task in Google Tasks
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleTask {
+    pub id: String,
+    pub title: String,
+    pub notes: Option<String>,
+    pub due: Option<String>,
+    pub completed: Option<bool>,
+}
+
+impl IssueTaskRepository for GoogleTaskList {
+
     fn defaults(&self) -> Option<Defaults> {
         self.defaults.clone()
     }

@@ -16,12 +16,13 @@ pub struct AppConfig {
     pub labels: LabelConfig,
 
     #[serde(rename = "github.com")]
-    pub github_com: Option<GitHubConfig>,
+    pub github_com: Vec<GitHubConfig>,
 
     #[serde(rename = "gitlab.com")]
-    pub gitlab_com: Option<GitLabConfig>,
+    pub gitlab_com: Vec<GitLabConfig>,
 
     pub jira: Vec<JiraConfig>,
+    // pub google_tasks: Vec<GoogleTaskConfig>,
 }
 #[derive(Debug, Deserialize, Clone)]
 pub struct LabelConfig {
@@ -47,7 +48,7 @@ pub struct Defaults {
     pub for_display: Option<bool>,
 }
 
-pub trait ProviderIface {
+pub trait IssueTaskRepository {
     fn defaults(&self) -> Option<Defaults>;
 
     fn id(&self) -> String;
@@ -72,14 +73,14 @@ impl AppConfig {
             | panic!("oops: the issue ID {} appears invalid. It was not prefixed with one of the Providers {:?}", issue, self.provider_ids())
         ));
 
-        self.find_by(|repo: Box<&dyn ProviderIface>| repo.id() == p)
+        self.find_by(|repo: Box<&dyn IssueTaskRepository>| repo.id() == p)
     }
 
     pub fn find_provider_by_id(
         &self,
         provider_id: &str,
     ) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
-        self.find_by(|repo: Box<&dyn ProviderIface>| repo.id() == *provider_id)
+        self.find_by(|repo: Box<&dyn IssueTaskRepository>| repo.id() == *provider_id)
     }
 
     /// Called after configuration is loaded. It determines the unique
@@ -89,15 +90,15 @@ impl AppConfig {
         let mut provider_ids = Vec::new();
 
         // Check if the GitHub configuration is present
-        if let Some(github_config) = &self.github_com {
-            for repo in &github_config.repositories {
+        for g in &self.github_com {
+            for repo in &g.repositories {
                 provider_ids.push(repo.id.clone());
             }
         }
 
         // Check if the GitLab configuration is present
-        if let Some(gitlab_config) = &self.gitlab_com {
-            for repo in &gitlab_config.repositories {
+        for g in &self.gitlab_com {
+            for repo in &g.repositories {
                 provider_ids.push(repo.id.clone());
             }
         }
@@ -113,34 +114,26 @@ impl AppConfig {
     }
 
     pub fn find_default_provider(&self) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
-        self.find_by(|repo: Box<&dyn ProviderIface>| repo.is_default())
+        self.find_by(|repo: Box<&dyn IssueTaskRepository>| repo.is_default())
     }
 
-    pub fn find_by<F: Fn(Box<&dyn ProviderIface>) -> bool>(
+    pub fn find_by<F: Fn(Box<&dyn IssueTaskRepository>) -> bool>(
         &self,
         f: F,
     ) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
-        if let Some(github_config) = &self.github_com {
-            if let Some(default_repo) = github_config
-                .repositories
-                .iter()
-                .find(|&repo| f(Box::new(repo)))
-            {
+        for g in &self.github_com {
+            if let Some(default_repo) = g.repositories.iter().find(|&repo| f(Box::new(repo))) {
                 return Ok(Some(TaskIssueProvider::GitHub(
-                    github_config.clone(),
+                    g.clone(),
                     default_repo.clone(),
                 )));
             }
         }
 
-        if let Some(gitlab_config) = &self.gitlab_com {
-            if let Some(default_repo) = gitlab_config
-                .repositories
-                .iter()
-                .find(|&repo| f(Box::new(repo)))
-            {
+        for g in &self.gitlab_com {
+            if let Some(default_repo) = g.repositories.iter().find(|&repo| f(Box::new(repo))) {
                 return Ok(Some(TaskIssueProvider::GitLab(
-                    gitlab_config.clone(),
+                    g.clone(),
                     default_repo.clone(),
                 )));
             }
@@ -172,8 +165,8 @@ impl Default for AppConfig {
     fn default() -> AppConfig {
         AppConfig {
             debug: None,
-            github_com: None,
-            gitlab_com: None,
+            github_com: Vec::new(),
+            gitlab_com: Vec::new(),
             jira: Vec::new(),
             labels: LabelConfig {
                 priority_labels: HashSet::new(),
