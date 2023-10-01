@@ -1,14 +1,16 @@
 #![feature(fn_traits)]
 #![feature(unboxed_closures)]
 
+
 use anyhow::Result;
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
 
-use serde_yaml;
 use clap::{Parser, Subcommand};
+use providers::jira::methods::list_jira_transition_ids;
 
-use tokio;
+
+
 mod config;
 mod control;
 mod output;
@@ -16,7 +18,7 @@ mod providers;
 
 use config::AppConfig;
 use control::*;
-use std::{str::FromStr, collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, path::PathBuf, str::FromStr};
 
 use output::{aggregate_and_display_all_tasks, list_providers};
 
@@ -68,6 +70,8 @@ enum Command {
     /// List Providers
     Providers,
 
+    /// Show Jira Transitions Providers
+    JiraTransitions { id: String },
 }
 
 #[derive(Debug, clap::Args)]
@@ -86,18 +90,15 @@ impl FromStr for CloseCommand {
 
 #[derive(Parser, Debug)]
 enum TagsCommand {
-
     /// Add more tags to the issue/task/item
     Add(TagOperationParameters),
 
     /// Remove tags to the issue/task/item
-    Remove(TagOperationParameters)
+    Remove(TagOperationParameters),
 }
-
 
 #[derive(clap::Args, Debug)]
 struct TagOperationParameters {
-
     /// ID of the task (must be prefixed with the provider id e.g. P-888, or J-ID-999)
     id: String,
 
@@ -105,26 +106,7 @@ struct TagOperationParameters {
     tags: Vec<String>,
 }
 
-#[tokio::main]
-async fn main() -> Result<(), anyhow::Error> {
-    let args = Cli::parse();
-    // Read the repository configuration from YAML
-
-    let config_file = match &args.config {
-        Some(x) => PathBuf::from(x).as_os_str().to_owned(),
-        None => { 
-            let proj_dirs = ProjectDirs::from("org", "inosion",  "tskmstr").unwrap_or_else(|| panic!("No Config directory found"));
-            let mut config_dir = proj_dirs.config_dir().as_os_str().to_owned();
-            config_dir.push("/tskmstr.config.yml");
-            config_dir
-        }
-    
-    
-    };
-
-    let contents = std::fs::read_to_string(config_file)?;
-    let config: AppConfig = serde_yaml::from_str(&contents)?;
-
+async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
     // Initialize your logger
     if args.debug || config.debug.is_some() {
         // Set up the logger with the desired log level
@@ -135,28 +117,55 @@ async fn main() -> Result<(), anyhow::Error> {
     }
 
     let colors = &config.colors;
-    match args.cmd {
+    match &args.cmd {
         Some(Command::Add {
             title,
             details,
             tags,
-        }) => add_new_task(&args.provider_id, &config, &title, &details, &tags).await?,
+        }) => add_new_task(&args.provider_id, config, title, details, tags).await?,
         Some(Command::Close(close_cmd)) => {
-            close_task( &config, close_cmd.id.clone()).await?;
+            close_task(config, close_cmd.id.clone()).await?;
         }
         Some(Command::Tags(TagsCommand::Add(tag_additions))) => {
-            let tag_set: &HashSet<String> = &tag_additions.tags.into_iter().collect();
-            add_tags_to_task(&config, tag_additions.id.clone(), &tag_set).await?;
+            let tag_set: &HashSet<String> = &tag_additions.tags.clone().into_iter().collect();
+            add_tags_to_task(config, tag_additions.id.clone(), tag_set).await?;
         }
         Some(Command::Tags(TagsCommand::Remove(tag_removals))) => {
-            let tag_set: &HashSet<String> = &tag_removals.tags.into_iter().collect();
-            remove_tags_from_task(&config, tag_removals.id.clone(), &tag_set).await?;
+            let tag_set: &HashSet<String> = &tag_removals.tags.clone().into_iter().collect();
+            remove_tags_from_task(config, tag_removals.id.clone(), tag_set).await?;
         }
         Some(Command::Providers) => {
-            list_providers(&config).await?;
+            list_providers(config).await?;
         }
-        None => aggregate_and_display_all_tasks(&args.provider_id, &config, &colors).await?,
+        Some(Command::JiraTransitions { id }) => {
+            list_jira_transition_ids(&config.jira[0], id).await?;
+        }
+        None => aggregate_and_display_all_tasks(&args.provider_id, config, colors).await?,
     };
 
     Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<(), anyhow::Error> {
+    let args = Cli::parse();
+    // Read the repository configuration from YAML
+
+    let config_file = match &args.config {
+        Some(x) => PathBuf::from(x).as_os_str().to_owned(),
+        None => {
+            let proj_dirs = ProjectDirs::from("org", "inosion", "tskmstr")
+                .unwrap_or_else(|| panic!("No Config directory found"));
+            let mut config_dir = proj_dirs.config_dir().as_os_str().to_owned();
+            config_dir.push("/tskmstr.config.yml");
+            config_dir
+        }
+    };
+    let filename = config_file.clone().into_string().unwrap();
+
+    let contents = std::fs::read_to_string(&config_file)
+        .expect(format!("Failed to open file {}", filename).as_str());
+    let config: AppConfig = serde_yaml::from_str(&contents)
+        .expect(format!("Failed to load file {}", filename).as_str());
+    do_work(&args, &config).await
 }
