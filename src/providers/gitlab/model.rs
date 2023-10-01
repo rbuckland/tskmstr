@@ -1,5 +1,5 @@
-use serde::Deserialize;
 use colored::Color;
+use serde::Deserialize;
 use serde_inline_default::serde_inline_default;
 use std::str::FromStr;
 
@@ -29,7 +29,7 @@ pub struct GitLabConfig {
 
     #[serde_inline_default("https://gitlab.com".to_string())]
     pub endpoint: String,
-    
+
     /// A String ID, used for messages
     #[serde_inline_default("gitlab.com".to_string())]
     pub provider_id: String,
