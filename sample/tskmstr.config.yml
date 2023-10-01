@@ -38,53 +38,57 @@ labels:
 # Configuration for gitlab
 #
 gitlab.com:
-  credential:
-    # the service item in yout keyring
-    service: gitlab.com
+    # unique id (only used for display)
+  - provider_id: gitlab repo/myusername
+    credential:
+      # the service item in yout keyring
+      service: gitlab.com
 
-    # the username in your keyring
-    username: myusername_in_keyring_entry_pat
-  
-  # a list of repositories to query, given the credentials above
-  repositories:
-     # id: make it unique
-     # a short code, used to distinquish the tasks, differed to the other task/issue providers
-     # a great set of unicode characters are here
-     # https://www.compart.com/en/unicode/category/So
-    - id: 🅆
-      color: blue
+      # the username in your keyring
+      username: myusername_in_keyring_entry_pat
+    
+    # a list of repositories to query, given the credentials above
+    repositories:
+      # id: make it unique
+      # a short code, used to distinquish the tasks, differed to the other task/issue providers
+      # a great set of unicode characters are here
+      # https://www.compart.com/en/unicode/category/So
+      - id: 🅆
+        color: blue
 
-      # the gitlab project Number, or string (with %2F for the /'s )
-      project_id: someorg%2Fmy-tasks
+        # the gitlab project Number, or string (with %2F for the /'s )
+        project_id: someorg%2Fmy-tasks
 
-      # common default parameters
-      defaults:
-        for_new_tasks: true
+        # common default parameters
+        defaults:
+          for_new_tasks: true
 
-    - id: 🄿
-      color: green    
-      project_id: someorg%2Fmy-tasks
-      defaults:
-        for_new_tasks: true
+      - id: 🄿
+        color: green    
+        project_id: someorg%2Fmy-tasks
+        defaults:
+          for_new_tasks: true
 
 #
 # Configuration for github
 #
 github.com:
-  credential:
-    service: github.com
-    username: some_pat_username_in_keyring
-  repositories:
-    - id: T # this is the actual tasks for task master
-      color: blue
-      owner: org-owner
-      repo: reponame
-    - id: 🄿
-      color: blue
-      owner: other-org-owner
-      repo: repo-name
-      defaults:
-        for_new_tasks: true # technically just one repo/provider has this field.
+    # unique id (only used for display)
+  - provider_id: github repo/myusername
+    credential:
+      service: github.com
+      username: some_pat_username_in_keyring
+    repositories:
+      - id: T # this is the actual tasks for task master
+        color: blue
+        owner: org-owner
+        repo: reponame
+      - id: 🄿
+        color: blue
+        owner: other-org-owner
+        repo: repo-name
+        defaults:
+          for_new_tasks: true # technically just one repo/provider has this field.
 
 #
 # Configuration for jira
