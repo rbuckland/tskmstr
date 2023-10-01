@@ -1,15 +1,11 @@
 use std::collections::HashSet;
 
-
-
 use colored::Color;
 use serde::Deserialize;
 
 use crate::providers::github::model::{GitHubConfig, GitHubRepository};
 use crate::providers::gitlab::model::{GitLabConfig, GitLabRepository};
 use crate::providers::jira::model::{JiraConfig, JiraProject};
-
-
 
 #[derive(Debug, Deserialize)]
 pub struct AppConfig {
@@ -26,12 +22,11 @@ pub struct AppConfig {
     pub gitlab_com: Option<GitLabConfig>,
 
     pub jira: Vec<JiraConfig>,
-
 }
 #[derive(Debug, Deserialize, Clone)]
 pub struct LabelConfig {
     pub priority_labels: HashSet<String>,
-    pub priority_timeframe: Option<String>
+    pub priority_timeframe: Option<String>,
 }
 
 /// there is only one default "place" we will create tasks into
@@ -53,7 +48,6 @@ pub struct Defaults {
 }
 
 pub trait ProviderIface {
-
     fn defaults(&self) -> Option<Defaults>;
 
     fn id(&self) -> String;
@@ -61,16 +55,18 @@ pub trait ProviderIface {
     fn color(&self) -> Color;
 
     fn is_default(&self) -> bool {
-        match self.defaults() { 
+        match self.defaults() {
             None => false,
-            Some(d) => d.for_new_tasks.unwrap_or(false)
+            Some(d) => d.for_new_tasks.unwrap_or(false),
         }
     }
 }
 
 impl AppConfig {
-
-    pub fn find_provider_for_issue(&self, issue: &String) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
+    pub fn find_provider_for_issue(
+        &self,
+        issue: &String,
+    ) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
         let maybe_provider: Vec<&str> = issue.split('/').collect();
         let p = String::from(*maybe_provider.first().unwrap_or_else(|
             | panic!("oops: the issue ID {} appears invalid. It was not prefixed with one of the Providers {:?}", issue, self.provider_ids())
@@ -79,10 +75,13 @@ impl AppConfig {
         self.find_by(|repo: Box<&dyn ProviderIface>| repo.id() == p)
     }
 
-    pub fn find_provider_by_id(&self, provider_id: &str) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
-        self.find_by(|repo: Box<&dyn ProviderIface>| repo.id() == String::from(provider_id))
+    pub fn find_provider_by_id(
+        &self,
+        provider_id: &str,
+    ) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
+        self.find_by(|repo: Box<&dyn ProviderIface>| repo.id() == *provider_id)
     }
-    
+
     /// Called after configuration is loaded. It determines the unique
     /// IDs for all Task/Issue providers
     // Function to get a Vec<String> of all provider IDs
@@ -109,7 +108,7 @@ impl AppConfig {
                 provider_ids.push(p.id.clone());
             }
         }
-        
+
         provider_ids
     }
 
@@ -117,14 +116,20 @@ impl AppConfig {
         self.find_by(|repo: Box<&dyn ProviderIface>| repo.is_default())
     }
 
-    pub fn find_by<F: Fn(Box<&dyn ProviderIface>) -> bool>(&self, f: F) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
+    pub fn find_by<F: Fn(Box<&dyn ProviderIface>) -> bool>(
+        &self,
+        f: F,
+    ) -> Result<Option<TaskIssueProvider>, anyhow::Error> {
         if let Some(github_config) = &self.github_com {
             if let Some(default_repo) = github_config
                 .repositories
                 .iter()
                 .find(|&repo| f(Box::new(repo)))
             {
-                return Ok(Some(TaskIssueProvider::GitHub(github_config.clone(), default_repo.clone())));
+                return Ok(Some(TaskIssueProvider::GitHub(
+                    github_config.clone(),
+                    default_repo.clone(),
+                )));
             }
         }
 
@@ -134,18 +139,22 @@ impl AppConfig {
                 .iter()
                 .find(|&repo| f(Box::new(repo)))
             {
-                return Ok(Some(TaskIssueProvider::GitLab(gitlab_config.clone(), default_repo.clone())));
+                return Ok(Some(TaskIssueProvider::GitLab(
+                    gitlab_config.clone(),
+                    default_repo.clone(),
+                )));
             }
         }
 
         for jc in &self.jira {
-            if let Some(found_jira_project_default) = jc
-                .projects
-                .iter()
-                .find(|&project| f(Box::new(project)))
-                {
-                    return Ok(Some(TaskIssueProvider::Jira(jc.clone(), found_jira_project_default.clone())));
-                }         
+            if let Some(found_jira_project_default) =
+                jc.projects.iter().find(|&project| f(Box::new(project)))
+            {
+                return Ok(Some(TaskIssueProvider::Jira(
+                    jc.clone(),
+                    found_jira_project_default.clone(),
+                )));
+            }
         }
 
         Ok(None)
@@ -166,7 +175,10 @@ impl Default for AppConfig {
             github_com: None,
             gitlab_com: None,
             jira: Vec::new(),
-            labels: LabelConfig { priority_labels: HashSet::new(), priority_timeframe: None },
+            labels: LabelConfig {
+                priority_labels: HashSet::new(),
+                priority_timeframe: None,
+            },
             colors: Colors {
                 issue_id: "magenta".to_string(),
                 title: "blue".to_string(),

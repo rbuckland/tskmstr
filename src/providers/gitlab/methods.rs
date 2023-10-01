@@ -18,8 +18,8 @@ use super::model::GitLabRepository;
 
 pub fn construct_gitlab_header(token: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
-    headers.insert("PRIVATE-TOKEN", format!("{}", token).parse().unwrap());
-    return headers;
+    headers.insert("PRIVATE-TOKEN", token.to_string().parse().unwrap());
+    headers
 }
 
 pub async fn close_task_gitlab(
@@ -133,10 +133,7 @@ pub async fn add_new_task_gitlab(
     });
 
     if let Some(ts) = tags {
-        issue_details["labels"] = ts
-            .iter()
-            .map(|label| label.clone())
-            .collect::<Vec<String>>()
+        issue_details["labels"] = ts.to_vec()
             .into();
     }
 

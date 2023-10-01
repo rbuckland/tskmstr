@@ -1,7 +1,29 @@
+
+# Colour options 
+# - black
+# - red
+# - green
+# - yellow
+# - blue
+# - magenta
+# - purple
+# - cyan
+# - white
+# - bright black
+# - bright red
+# - bright green
+# - bright yellow
+# - bright blue
+# - bright magenta
+# - bright cyan
+# - bright white
+
 colors:
   tags: green
   title: blue
   issue_id: red
+
+
 labels:
   # if any issue has one of these labels, 
   # they will be shown in this list
@@ -11,19 +33,85 @@ labels:
   # if a task has a deadline, it is considered priority, also
   # if the due date is before this time (regardless of having urgent/todo label)
   priority_timeframe: 48hrs
+
+#
+# Configuration for gitlab
+#
 gitlab.com:
   credential:
+    # the service item in yout keyring
     service: gitlab.com
+
+    # the username in your keyring
     username: myusername_in_keyring_entry_pat
+  
+  # a list of repositories to query, given the credentials above
   repositories:
-     # a great set of unicode characters are here - https://www.compart.com/en/unicode/category/So
+     # id: make it unique
+     # a short code, used to distinquish the tasks, differed to the other task/issue providers
+     # a great set of unicode characters are here
+     # https://www.compart.com/en/unicode/category/So
     - id: 🅆
       color: blue
+
+      # the gitlab project Number, or string (with %2F for the /'s )
       project_id: someorg%2Fmy-tasks
+
+      # common default parameters
       defaults:
         for_new_tasks: true
+
     - id: 🄿
       color: green    
       project_id: someorg%2Fmy-tasks
       defaults:
         for_new_tasks: true
+
+#
+# Configuration for github
+#
+github.com:
+  credential:
+    service: github.com
+    username: some_pat_username_in_keyring
+  repositories:
+    - id: T # this is the actual tasks for task master
+      color: blue
+      owner: org-owner
+      repo: reponame
+    - id: 🄿
+      color: blue
+      owner: other-org-owner
+      repo: repo-name
+      defaults:
+        for_new_tasks: true # technically just one repo/provider has this field.
+
+#
+# Configuration for jira
+#
+jira:
+  - provider_id: Jira on SaaS
+    endpoint: https://yourjira-instance.atlassian.net
+    credential:
+      service: yourjira-instance.atlassian.net
+      username: user@email.com # this and the password are used for the auth, so make it correct
+
+    projects:
+      - id: J # tskmstr short_code
+        color: green
+        project_key: KAN # the jira PROJECT_ID
+        default_issue_type: Bug # this defaults to Task in the Code.
+
+        # this one is complicated. 
+        # jira determines a close, by moving the issue through the workflow, so you need to determine 
+        # for a given ISSUE, what the next transition_id is 
+        # for this, run 
+        #     tskmstr jira-transitions KAN-3 
+        # 
+        # where, you have a working config, and can see tasks. 
+        # this will then show the appropriate transitions available for that task
+        # grab the id: and stick below
+        close_transition_id: 31 
+        
+        defaults:
+          for_new_tasks: true

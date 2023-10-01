@@ -1,4 +1,4 @@
-use log::{debug, error, info, warn};
+use log::{debug};
 use std::collections::HashSet;
 
 use reqwest::{
@@ -19,7 +19,7 @@ pub fn construct_github_header(token: &str) -> HeaderMap {
     headers.insert(USER_AGENT, "User".parse().unwrap());
     headers.insert(AUTHORIZATION, format!("Bearer {}", token).parse().unwrap());
     headers.insert(ACCEPT, "application/vnd.github.v3+json".parse().unwrap());
-    return headers;
+    headers
 }
 
 pub async fn close_task_github(
@@ -27,12 +27,11 @@ pub async fn close_task_github(
     repo_config: &GitHubRepository,
     issue_id: &String,
 ) -> Result<(), anyhow::Error> {
-
     let client = Client::new();
 
     let url = format!(
-        "https://api.github.com/repos/{}/{}/issues/{}",
-        repo_config.owner, repo_config.repo, &issue_id
+        "{}/repos/{}/{}/issues/{}",
+        github_config.endpoint, repo_config.owner, repo_config.repo, &issue_id
     );
     debug!("github: will close {}", url);
 
