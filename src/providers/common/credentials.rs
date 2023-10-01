@@ -1,4 +1,3 @@
-
 use keyring::Entry;
 use serde::Deserialize;
 
@@ -11,35 +10,26 @@ pub struct CredentialKeyringEntry {
 pub trait HasSecretToken {
     fn task_provider_id(&self) -> String;
 
-    fn token(&self) -> Option<String>;
-
     fn credential(&self) -> Option<CredentialKeyringEntry>;
 
+    fn get_username(&self) -> String {
+        self.credential().unwrap().username.clone()
+    }
+
     fn get_token(&self) -> String {
-        let token_str = match (self.token(), self.credential()) {
-            (None, Some(cke)) => Entry::new(&cke.service, &cke.username)
-                .expect(
-                    format!(
-                        "failed to get the keyring for {}/{}",
-                        &cke.service, &cke.username
-                    )
-                    .as_str(),
-                )
+        
+
+        match self.credential() {
+            Some(cke) => Entry::new(&cke.service, &cke.username)
+                .unwrap_or_else(|_| panic!("failed to get the keyring for {}/{}",
+                        &cke.service, &cke.username))
                 .get_password()
-                .expect(
-                    format!(
-                        "failed to get the API token for {}/{}",
-                        &cke.service, &cke.username
-                    )
-                    .as_str(),
-                ),
-            (Some(token), None) => token,
+                .unwrap_or_else(|_| panic!("failed to get the API token for {}/{}",
+                        &cke.service, &cke.username)),
             _ => panic!(
-                "Please provide a token or credentials in config for: {}",
+                "Please provide a credentials in config for: {}",
                 self.task_provider_id()
             ),
-        };
-
-        token_str
+        }
     }
 }

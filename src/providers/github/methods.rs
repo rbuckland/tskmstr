@@ -1,3 +1,4 @@
+use log::{debug};
 use std::collections::HashSet;
 
 use reqwest::{
@@ -18,7 +19,47 @@ pub fn construct_github_header(token: &str) -> HeaderMap {
     headers.insert(USER_AGENT, "User".parse().unwrap());
     headers.insert(AUTHORIZATION, format!("Bearer {}", token).parse().unwrap());
     headers.insert(ACCEPT, "application/vnd.github.v3+json".parse().unwrap());
-    return headers;
+    headers
+}
+
+pub async fn close_task_github(
+    github_config: &GitHubConfig,
+    repo_config: &GitHubRepository,
+    issue_id: &String,
+) -> Result<(), anyhow::Error> {
+    let client = Client::new();
+
+    let url = format!(
+        "{}/repos/{}/{}/issues/{}",
+        github_config.endpoint, repo_config.owner, repo_config.repo, &issue_id
+    );
+    debug!("github: will close {}", url);
+
+    let response = client
+        .patch(&url)
+        .headers(construct_github_header(&github_config.get_token()))
+        .json(&serde_json::json!({
+            "state": "closed"
+        }))
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        println!(
+            "Task {} closed in GitHub repo: {}/{}",
+            issue_id, repo_config.owner, repo_config.repo
+        );
+    } else {
+        println!(
+            "Error: Unable to close task {} in GitHub repo {}/{}. Status: {:?}",
+            issue_id,
+            repo_config.owner,
+            repo_config.repo,
+            response.status()
+        );
+    }
+
+    Ok(())
 }
 
 pub async fn collect_tasks_from_github(
@@ -35,8 +76,8 @@ pub async fn collect_tasks_from_github(
         .enumerate()
     {
         let url = format!(
-            "https://api.github.com/repos/{}/{}/issues",
-            repo.owner, repo.repo
+            "{}/repos/{}/{}/issues",
+            github_config.endpoint, repo.owner, repo.repo
         );
 
         let response = client
@@ -82,8 +123,8 @@ pub async fn add_new_task_github(
     let client = Client::new();
 
     let add_url = format!(
-        "https://api.github.com/repos/{}/{}/issues",
-        github_repo.owner, github_repo.repo
+        "{}/repos/{}/{}/issues",
+        github_config.endpoint, github_repo.owner, github_repo.repo
     );
 
     let mut issue_details = json!({
@@ -135,8 +176,8 @@ pub async fn add_labels_to_github_issue(
 
     // Create a URL for the GitHub API endpoint to add labels
     let url = format!(
-        "https://api.github.com/repos/{}/{}/issues/{}/labels",
-        github_repo.owner, github_repo.repo, issue_number
+        "{}/repos/{}/{}/issues/{}/labels",
+        github_config.endpoint, github_repo.owner, github_repo.repo, issue_number
     );
 
     // Prepare the list of labels to add as JSON
@@ -174,8 +215,8 @@ pub async fn remove_labels_from_github_issue(
 
     // Create a URL for the GitHub API endpoint to remove labels for a specific issue
     let url = format!(
-        "https://api.github.com/repos/{}/{}/issues/{}/labels",
-        github_repo.owner, github_repo.repo, issue_number
+        "{}/repos/{}/{}/issues/{}/labels",
+        github_config.endpoint, github_repo.owner, github_repo.repo, issue_number
     );
 
     // Iterate through the labels and send DELETE requests for each label

@@ -1,9 +1,13 @@
 use colored::Color;
+use serde_inline_default::serde_inline_default;
 use std::str::FromStr;
 
 use serde::Deserialize;
 
-use crate::{providers::common::credentials::{HasSecretToken, CredentialKeyringEntry}, config::{Defaults, ProviderIface}};
+use crate::{
+    config::{Defaults, ProviderIface},
+    providers::common::credentials::{CredentialKeyringEntry, HasSecretToken},
+};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct GitHubLabel {
@@ -20,20 +24,25 @@ pub struct GitHubIssue {
     pub labels: Vec<GitHubLabel>,
 }
 
+#[serde_inline_default]
 #[derive(Debug, Deserialize, Clone)]
 pub struct GitHubConfig {
-    pub token: Option<String>,
     pub credential: Option<CredentialKeyringEntry>,
+
+    // The github endpoint URL
+    #[serde_inline_default("https://api.github.com".to_string())]
+    pub endpoint: String,
+
+    /// A String ID, used for messages
+    #[serde_inline_default("github.com".to_string())]
+    pub provider_id: String,
+
     pub repositories: Vec<GitHubRepository>,
 }
 
 impl HasSecretToken for GitHubConfig {
     fn task_provider_id(&self) -> String {
-        "github.com".to_string()
-    }
-
-    fn token(&self) -> Option<String> {
-        self.token.clone()
+        self.provider_id.clone()
     }
 
     fn credential(&self) -> Option<CredentialKeyringEntry> {
@@ -71,5 +80,5 @@ impl ProviderIface for GitHubRepository {
 
     fn id(&self) -> String {
         self.id.clone()
-    }    
+    }
 }
