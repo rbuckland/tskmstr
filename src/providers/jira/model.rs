@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use colored::Color;
 use serde_inline_default::serde_inline_default;
 use std::str::FromStr;
@@ -21,7 +21,7 @@ pub struct JiraIssue {
 
     #[serde(rename(deserialize = "self"))]    
     pub url: String,
-    pub fields: JiraFields,
+    pub fields: Option<JiraFields>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -29,7 +29,14 @@ pub struct JiraFields {
     pub summary: String,
     pub description: Option<JiraDescription>,
     pub labels: Option<Vec<String>>,
+    pub issuetype: Option<JiraIssueType>,
 }
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct JiraIssueType {
+    pub name: String,
+}
+
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct JiraDescription {
@@ -72,6 +79,7 @@ impl HasSecretToken for JiraConfig {
     }
 }
 
+#[serde_inline_default]
 #[derive(Debug, Deserialize, Clone)]
 pub struct JiraProject {
     /// a unique character across the entire repository config
@@ -84,6 +92,10 @@ pub struct JiraProject {
 
     /// the Jira project key, e.g., "PROJ123"
     pub project_key: String,
+
+    /// The default issue to create
+    #[serde_inline_default("Task".to_string())]
+    pub default_issue_type: String,
 
     /// Defauls configuration
     pub defaults: Option<Defaults>,
