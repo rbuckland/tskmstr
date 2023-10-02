@@ -97,7 +97,7 @@ github.com:
 
         filter: labels=team-x,team-support
         # filter: assignee=username
-        # filter: assignee=username&;abeles=support
+        # filter: assignee=username&labels=support
       
       - id: 🄿
         color: blue
