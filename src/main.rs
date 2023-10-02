@@ -81,6 +81,9 @@ enum Command {
         #[arg(short, long)]
         issue_store_id: Option<String>,
 
+        /// Show all details
+        #[arg(short, long)]
+        all: bool,
     }
 }
 
@@ -153,8 +156,8 @@ async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
         Some(Command::JiraTransitions { id }) => {
             list_jira_transition_ids(&config.jira[0], id).await?;
         }
-        Some(Command::List{ issue_store_id }) => aggregate_and_display_all_tasks(issue_store_id, config, colors).await?,
-        None => aggregate_and_display_all_tasks(&None, config, colors).await?,
+        Some(Command::List{ issue_store_id , all }) => aggregate_and_display_all_tasks(issue_store_id, config, colors, &all).await?,
+        None => aggregate_and_display_all_tasks(&None, config, colors, &false).await?,
     };
 
     Ok(())
