@@ -62,6 +62,7 @@ pub fn display_tasks_in_table(
     issues: &Vec<Issue>,
     colors: &Colors,
     priority_labels: &HashSet<String>,
+    all: &bool,
 ) -> Result<(), anyhow::Error> {
     let mut grouped_tasks = group_tasks_by_labels(issues, priority_labels);
     let priority_tasks = group_tasks_by_priority_labels(issues, priority_labels);
@@ -100,11 +101,18 @@ pub fn display_tasks_in_table(
                 .collect::<Vec<String>>()
                 .join(", ")
         );
+
+        let details = match all { 
+            false => "".to_string(),
+            true => format!(" - {}",issue.html_url)
+        };
+
         println!(
-            " - {} {} {}",
+            " - {} {} {}{}",
             issue.id.color(Color::from_str(&colors.issue_id).unwrap()),
             issue.title.color(Color::from_str(&colors.title).unwrap()),
-            tags.color(Color::from_str(&colors.tags).unwrap())
+            tags.color(Color::from_str(&colors.tags).unwrap()),
+            details
         );
     }
 
@@ -128,11 +136,17 @@ pub fn display_tasks_in_table(
                         .collect::<Vec<String>>()
                         .join(", ")
                 );
+                let details = match all { 
+                    false => "".to_string(),
+                    true => format!(" - {}",issue.html_url)
+                };
+
                 println!(
-                    " - {} {} {}",
+                    " - {} {} {}{}",
                     issue.id.color(Color::from_str(&colors.issue_id).unwrap()),
                     issue.title.color(Color::from_str(&colors.title).unwrap()),
-                    tags.color(Color::from_str(&colors.tags).unwrap())
+                    tags.color(Color::from_str(&colors.tags).unwrap()),
+                    details
                 );
             }
             println!();
@@ -146,6 +160,7 @@ pub async fn aggregate_and_display_all_tasks(
     provider_id: &Option<String>,
     config: &AppConfig,
     colors: &Colors,
+    all: &bool,
 ) -> Result<(), anyhow::Error> {
     let mut all_issues = Vec::new();
 
@@ -158,9 +173,8 @@ pub async fn aggregate_and_display_all_tasks(
     let jira_tasks = collect_tasks_from_jira(&config.jira, provider_id).await?;
     all_issues.extend(jira_tasks);
 
-    let _ = display_tasks_in_table(&all_issues, colors, &config.labels.priority_labels);
+    display_tasks_in_table(&all_issues, colors, &config.labels.priority_labels, all)
 
-    Ok(())
 }
 
 pub async fn list_issue_stores(config: &AppConfig) -> Result<(), anyhow::Error> {
