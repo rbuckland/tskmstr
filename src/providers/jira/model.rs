@@ -4,7 +4,7 @@ use serde_inline_default::serde_inline_default;
 use std::str::FromStr;
 
 use crate::{
-    config::{Defaults, ProviderIface},
+    config::{Defaults, IssueTaskRepository},
     providers::common::credentials::{CredentialKeyringEntry, HasSecretToken},
 };
 
@@ -99,9 +99,12 @@ pub struct JiraProject {
 
     /// Defauls configuration
     pub defaults: Option<Defaults>,
+
+    /// filter certain issues
+    pub filter: Option<String>,
 }
 
-impl ProviderIface for JiraProject {
+impl IssueTaskRepository for JiraProject {
     fn defaults(&self) -> Option<Defaults> {
         self.defaults.clone()
     }

@@ -12,15 +12,18 @@
 
 - [tskmstr](#tskmstr)
   - [Installation](#installation)
-  - [Building](#building)
   - [Configuration](#configuration)
+  - [Terminology](#terminology)
   - [Usage](#usage)
+    - [Listing Tasks](#listing-tasks)
     - [Adding a Task](#adding-a-task)
     - [Closing a Task](#closing-a-task)
-    - [Listing Tasks](#listing-tasks)
-  - [Adding and Removing Labels](#adding-and-removing-labels)
+    - [Adding and Removing Labels](#adding-and-removing-labels)
+    - [Listing Issue Stores](#listing-issue-stores)
+    - [Filtering](#filtering)
   - [Command Reference](#command-reference)
   - [Features](#features)
+  - [Building](#building)
   - [Contributing](#contributing)
   - [License](#license)
 
@@ -38,51 +41,28 @@ You can use a private repo on gitlab, or github to store your personal **TODO** 
 
 With tskmstr, you can efficiently interact with your tasks, categorize them with labels, and view them, and perform basic operations on them (new, close, re-label).
 
-For more complicated activties, (triage, workflow, attachments) complex editing. Then this tool is not that. Think of **tskmstr** as a pane of glass, into the aggregated view of tasks/todo/lists you need to work on.
+For more complicated activities, (triage, workflow, attachments) complex editing. Then this tool is not that. Think of **tskmstr** as a pane of glass, into the aggregated view of tasks/todo/lists you need to work on.
 
 ## Installation
 
 Download the latest release for your OS from 
 
-* [relases](https://github.com/rbuckland/tskmstr/releases)
+* [Compiled Releases](https://github.com/rbuckland/tskmstr/releases)
+   - Linux
+   - Mac
+   - Windows
 
-1. place it in your path (~/.local/bin, /usr/local/bin)
+1. Place it in your PATH (~/.local/bin, /usr/local/bin)
 2. Create a symlink `t` (it's less to type)
     `ln -s $(which tskmstr) $(dirname $(which tskmstr))/e`
 3. Now configure - [Configuration](#configuration)
 
-## Building
-
-To use **tskmstr**, you'll need to build it from source. Follow these steps:
-
-1. Clone the repository:
-
-   ```sh
-   git clone https://github.com/rbuckland/tskmstr
-   cd tskmstr
-   ```
-
-2. Build the project using Cargo:
-
-    ```
-    cargo build --release
-    ```
-
-4. Install
-   
-    For convenience, the tskmstr binary is just called "t".
-
-    ```
-    mkdir -p ~/.local/bin && cp ./target/release/t ~/.local/bin/t
-    ```
-
-5. Configure it        
 
 ## Configuration
 
 Before using **tskmstr**, you need to configure it with your GitHub, Jira and/or GitLab credentials. **tskmstr** reads your credentials securely from your OS keyring.
 
-Refer to the sample config [sample-config](sample/tskmstr.config.yml)
+Refer to the comprehensive sample configuration [sample-config](sample/tskmstr.config.yml), that provides a good set of examples.
 
 This config file needs to go into:
 
@@ -90,52 +70,71 @@ This config file needs to go into:
 - Windows - `%LOCALAPPDATA%/tskmstr/tskmstr.config.yml`
 - Mac OSX - `~/Library/Preferences/tskmstr/tskmstr.config.yml`
 
-The configuration is a YAML file, which should look like below:
-
+You can override the config file with `--config`
 
 1. Create a new file `~/.config/tskmstr/tskmstr.config.yml`
 
-```yaml
+    ```yaml
 
-colors:
-  issue_id: bright red
-  title: blue
-  tags: bright green
+    colors:
+      issue_id: bright red
+      title: blue
+      tags: bright green
 
-labels:
-  priority_labels:
-    - todo
-    - urgent
-    - now
+    labels:
+      priority_labels:
+        - todo
+        - urgent
+        - now
 
-github.com:
-  credential:
-    service: github.com
-    username: key_username_in_keyring
-  repositories:
-    - id: 🅆
-      color: blue
-      owner: yourgithub_org
-      repo: github_repo
-      defaults:
-        for_new_tasks: true
-    - id: 🄿
-      color: blue
-      owner: other_github_org
-      repo: github_repo2
+    github.com:
+      - provider_id: Stuff On GitHub
+        credential:
+          service: github.com
+          username: key_username_in_keyring
+        repositories:
+          - id: 🅆
+            color: blue
+            owner: yourgithub_org
+            repo: github_repo
+            defaults:
+              for_new_tasks: true
+            filter: labels=bugs    
+          - id: 🄿
+            color: blue
+            owner: other_github_org
+            repo: github_repo2
 
-gitlab.com:
-  credential:
-    service: gitlab.com
-    username: key_username_in_keyring
-  repositories:
-    - id: Ⓐ
-      color: blue
-      project_id: group%2Fsubgroup%2Frepo
 
-```
+    gitlab.com:
+      - provider_id: work-repos
+        credential:
+          service: gitlab.com
+          username: key_username_in_keyring
+        repositories:
+          - id: Ⓐ
+            color: blue
+            project_id: group%2Fsubgroup%2Frepo
+            filter: labels=phase::selected         
+
+    jira:
+      - provider_id: Jira on SaaS
+        endpoint: https://yourjira-instance.atlassian.net
+        credential:
+          service: yourjira-instance.atlassian.net
+          username: user@email.com # this and the password are used for the auth, so make it correct
+
+        projects:
+          - id: J # tskmstr short_code
+            color: green
+            project_key: KAN # the jira PROJECT_ID
+            default_issue_type: Bug # this defaults to Task in the Code.
+            close_transition_id: 31
+            filter: labels in (label2, label9) AND assignee = currentUser()            
+
+    ```
 Each repository needs a unique character (one or more letters assigned), so you can refer
-to eacn issue/task individually across the aggregated set.
+to each issue/task individually across the aggregated set.
 
 You can configure colors, set priority labels, and specify your repositories on both GitHub and GitLab.
 
@@ -218,15 +217,60 @@ Tag: renovations
 
 Each of the "repositories" has a unique ID which comes from the config file `<gl><nnn>/<issue_id>` or `<gh><nnn>/<issue_id>`
 
+## Terminology
+
+ Because we are aggregating across different vendor solutions, terminology does get a little mixed up. This table will help.
+ 
+| What we Call It |   Gitlab      |  GitHub       | Jira |
+|-----------------|---------------|---------------|------|
+| Issue      | Issue (subtasks and epics are not supported by **tskmstr**)        | Issues | Issue (subtasks and epics are not supported by **tskmstr**)  |
+| Tags^            | Labels        |  Labels       | Labels |
+
+
+^ tags was chosen because it is less to "type" on the command line. But really tags and labels are synonymous.
+
+**Provider** - a provider is the "system", github/gitlab/jira. In the configuration, this is a `provider_id:`.
+             
+
+**Issue Store, Issue/Task Repository** - specific configured repository of a provider. (it is synonymous with a `repository`) - the provider of issues. This is the "IssueStoreID" In the configuration it is `id:`
 
 ## Usage
+
+
+**tskmstr** supports basic operations.
+- list tasks (optionally filtered)
+- add a new task
+- close a task
+- add tags to a task
+- remove tags from a task
+
+For anything more complex, we suggest you use the dedicated UI or CLI tool of each solution.
+- `glab` - Command Line tool for GitLab [gh CLI](https://github.com/cli/cli)
+- `gh` - Command Line tool for GitHub - [glab CLI](https://docs.gitlab.com/ee/editor_extensions/gitlab_cli/)
+- `go-jira` - 3rd Party Command Line tool for Jira.[go-jira CLI](https://github.com/go-jira/jira)
+
+### Listing Tasks
+
+To list all your tasks, grouped by labels and priority, simply run:
+
+```
+tskmstr
+
+# to filter on just one repo/project
+tskmstr list -i P
+```
+
 ### Adding a Task
 
 To add a new task to your default repository, use the add command:
 
 ```
 tskmstr add "Task Title" "Task Details" tag1 tag2 tag3
-``````
+
+# only add a task to the "W" repo
+tskmstr add -i W "Task Title" "Task Details" tag1 tag2 tag3
+
+```
 
 This command adds a new task with the specified title, details, and tags.
 It will add it to the `default`, which is set in the config.
@@ -244,50 +288,113 @@ To close a task, use the close command:
 
 ```
 t close <issue_id>
+
+# close issue 101 on repo, with `id` X 
+tskmstr close X/101
+
+#  close a Jira ticket
+tskmstr close JIRA/ABC-123
 ```
 
-Replace <issue_id> with the ID of the task you want to close. (e.g. `Ⓐ/22`, `gh2/444`)
+Replace `<issue_id>` with the ID of the task you want to close. (e.g. `Ⓐ/22`, `gh2/444`)
+The issue ID is listed when you run `tskmstr` or `tskmstr list [-i <id>]`
 
-### Listing Tasks
 
-To list all your tasks, grouped by labels and priority, simply run:
-
-```
-t
-```
-
-## Adding and Removing Labels
+### Adding and Removing Labels
 
 You can add and remove labels from a task using the tag add and tag remove commands:
 
 ```
 tskmstr tags add <issue_id> tag1 tag2 tag3
 tskmstr tags remove <issue_id> tag1 tag2 tag3
+
 # example: 
 tskmstr tags remove J/PROJ-2 this-label that-label another-label
 ```
+### Listing Issue Stores
+
+```
+> tskmstr issue-stores
+T - https://api.github.com/uation ser/repos
+🄿 - https://api.github.com/user/tskmstr-tasks
+🅆 - https://gitlab.com/username%2Fsome-sub-repo
+```
+
+Use this to determine the `-i <id>` you need to use for `tskmstr add -i <id> <tile> <details> [<tag>...]`
+
+### Filtering
+
+In the configuration you can set static filters for each issue store (project, repository).
+
+This can be used when 
+- you only need to see your personal tickets
+- you only need to see issues related to your team
+- you only want to see issues that are related to a phase in your workflow
+
+The filtering utilises the underlying providers extra query parameters 
+
+| Provider | Filtering Technique | Documentation | Example / Notes   |
+|----------|---------------------|---------------|------------|
+| GitHub   | Query Parameters    | [REST API Issues Query Params](https://docs.github.com/en/rest/issues/issues?apiVersion=2022-11-28#list-repository-issues--parameters)              | Example:<br/>`filter: labels=team-x,team-support`<br/>`filter: assignee=username`<br/>`filter: assignee=username&labels=support`
+| GitLab   | Query Parameters    | [REST API Issues Query Params](https://docs.gitlab.com/ee/api/issues.html)              | Example:<br/>`filter: labels=team-x,team-support`<br/>`filter: assignee_username=username`<br/>`filter: assignee_username=username&labels=support` <br/>Labels are AND'd not OR'd
+| Jira     | JQL                 | [JQL](https://support.atlassian.com/jira-software-cloud/docs/jql-operators/) |  The filter is appended to <br/> `project={} AND resolution = unresolved` <br/>Example:<br/>`filter: labels in (label2, label9) AND assignee = currentUser() ` |
+
+Filtering is perhaps the core feature you will want. The idea being, at the CLI you just want to know what YOU need to do today. 
 
 ## Command Reference
 
-    add: Add a new task/issue to the default repository.
-    close: Close a task/issue.
-    list: List all tasks/issues, grouped by labels and priority.
-    tags add: Add tags to a task.
-    tags remove: Remove tags from a task.
-    providers: list the providers configured
-    jira-transitions <ISSUE-ID> # special required for configuring jira
-
+The full command help can be obtained with `--help`
+* `list`: List all tasks/issues, grouped by labels and priority.
+* `add <title> <details> [ tags,... ]`: Add a new task/issue to the default repository.
+* `close <issue_id>`: Close a task/issue.
+* `tags add <issue_id>`: Add tags to a task.
+* `tags remove <issue_id>`: Remove tags from a task.
+* `issue-stores`: list the configured issues-stores (repositories, todo lists)
+* `jira-transitions` <ISSUE-ID> # special required for configuring jira
 
 ## Features
 
-* [features](doc/features_roadmap.md)
+For current and upcoming (intended features, see the more detailed list here)
+
+* [features roadmap](doc/features_roadmap.md)
+
+* Planned Features - [tskmstr features](https://github.com/rbuckland/tskmstr/issues?q=is%3Aopen+is%3Aissue+label%3Afeature)
+
+
+## Building
+
+To use **tskmstr**, you'll need to build it from source. Follow these steps:
+
+1. Clone the repository:
+
+   ```sh
+   git clone https://github.com/rbuckland/tskmstr
+   cd tskmstr
+   ```
+
+2. Build the project using Cargo:
+
+    ```
+    cargo build --release
+    ```
+
+4. Install
+   
+    For convenience, the **tskmstr** binary is just called "t".
+
+    ```
+    mkdir -p ~/.local/bin && cp ./target/release/t ~/.local/bin/t
+    ```
+
+5. Configure it        
+
 
 ## Contributing
 
-Contributions to tskmstr are welcome! Please check out the [contribution guidelines](./Contributing.md) for more details.
+Contributions to **tskmstr** are welcome! Please check out the [contribution guidelines](./Contributing.md) for more details.
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE.md file for details.
 
-Enjoy using tskmstr to stay organized and manage your tasks across multiple repositories! If you have any questions or encounter issues, feel free to reach out to our community. Happy task management!
+Enjoy using **tskmstr** to stay organized and manage your tasks across multiple repositories! If you have any questions or encounter issues, feel free to reach out to our community. Happy task management!

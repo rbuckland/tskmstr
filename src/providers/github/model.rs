@@ -5,7 +5,7 @@ use std::str::FromStr;
 use serde::Deserialize;
 
 use crate::{
-    config::{Defaults, ProviderIface},
+    config::{Defaults, IssueTaskRepository},
     providers::common::credentials::{CredentialKeyringEntry, HasSecretToken},
 };
 
@@ -68,9 +68,12 @@ pub struct GitHubRepository {
 
     /// Defauls configuration
     pub defaults: Option<Defaults>,
+
+    /// filter certain issues
+    pub filter: Option<String>,
 }
 
-impl ProviderIface for GitHubRepository {
+impl IssueTaskRepository for GitHubRepository {
     fn defaults(&self) -> Option<Defaults> {
         self.defaults.clone()
     }
