@@ -33,6 +33,7 @@ pub async fn close_task_gitlab(
         "{}/api/v4/projects/{}/issues/{}?state_event=close",
         &gitlab_config.endpoint, repo_config.project_id, &issue_id
     );
+
     debug!("gitlab: will close {}", url);
 
     let response = client
@@ -59,7 +60,7 @@ pub async fn close_task_gitlab(
 
 pub async fn collect_tasks_from_gitlab(
     gitlab_config: &Vec<GitLabConfig>,
-    provider_id: &Option<String>,
+    issue_store_id: &Option<String>,
 ) -> Result<Vec<Issue>, anyhow::Error> {
     let client: Client = Client::new();
     let mut all_issues = Vec::new();
@@ -68,13 +69,20 @@ pub async fn collect_tasks_from_gitlab(
         for (_idx, repo) in g
             .repositories
             .iter()
-            .filter(|&r| provider_id.is_none() || provider_id.as_deref().is_some_and(|p| r.id == p))
+            .filter(|&r| issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p))
             .enumerate()
         {
+            let optional_filter = repo
+                .filter
+                .as_ref()
+                .map_or("".to_string(), |filt| format!("&{}", filt));
+
             let url = format!(
-                "{}/api/v4/projects/{}/issues?state=opened",
-                g.endpoint, repo.project_id
+                "{}/api/v4/projects/{}/issues?state=opened{}",
+                g.endpoint, repo.project_id, optional_filter
             );
+
+            debug!("gitlab:get issues {}", url);
 
             let response = client
                 .get(&url)

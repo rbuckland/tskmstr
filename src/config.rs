@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-
+use serde_inline_default::serde_inline_default;
 use colored::Color;
 use serde::Deserialize;
 
@@ -7,6 +7,7 @@ use crate::providers::github::model::{GitHubConfig, GitHubRepository};
 use crate::providers::gitlab::model::{GitLabConfig, GitLabRepository};
 use crate::providers::jira::model::{JiraConfig, JiraProject};
 
+#[serde_inline_default]
 #[derive(Debug, Deserialize)]
 pub struct AppConfig {
     pub debug: Option<bool>,
@@ -15,15 +16,20 @@ pub struct AppConfig {
 
     pub labels: LabelConfig,
 
+    #[serde_inline_default(Vec::<GitHubConfig>::new())]
     #[serde(rename = "github.com")]
     pub github_com: Vec<GitHubConfig>,
 
+    #[serde_inline_default(Vec::<GitLabConfig>::new())]
     #[serde(rename = "gitlab.com")]
     pub gitlab_com: Vec<GitLabConfig>,
 
+    #[serde_inline_default(Vec::<JiraConfig>::new())]
     pub jira: Vec<JiraConfig>,
+
     // pub google_tasks: Vec<GoogleTaskConfig>,
 }
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct LabelConfig {
     pub priority_labels: HashSet<String>,

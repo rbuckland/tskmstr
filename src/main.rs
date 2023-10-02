@@ -20,13 +20,13 @@ use config::AppConfig;
 use control::*;
 use std::{collections::HashSet, path::PathBuf, str::FromStr};
 
-use output::{aggregate_and_display_all_tasks, list_providers};
+use output::{aggregate_and_display_all_tasks, list_issue_stores};
 
 use directories::ProjectDirs;
 
-#[derive(Debug, Parser)] // requires `derive` feature
+#[derive(Debug, Parser)]
 #[command(name = "t")]
-#[command(about = "tskmstr: A Task & Issue Management CLI", long_about = None)]
+#[command(about = "tskmstr: A Task & Issue Management Aggregation CLI", long_about = None)]
 struct Cli {
     #[arg(short, long)]
     debug: bool,
@@ -37,10 +37,6 @@ struct Cli {
     #[arg(short, long)]
     config: Option<String>,
 
-    /// Limit the activity to one task/issue provider
-    #[arg(short, long)]
-    provider_id: Option<String>,
-
     #[command(subcommand)]
     // optional because, default execution with no args will list all tasks/issues
     cmd: Option<Command>,
@@ -50,7 +46,7 @@ struct Cli {
 enum Command {
     /// Add a new issue to the default repository
     Add {
-        /// The title of your task/issue
+        /// The title of your issue/task
         title: String,
 
         /// Details of the issue
@@ -58,33 +54,48 @@ enum Command {
 
         /// Tags/Labels to apply to the issue/task
         tags: Option<Vec<String>>,
+
+        /// Limit the activity to one issue/task repository
+        #[arg(short, long)]
+        issue_store_id: Option<String>,
+
     },
 
     /// Close a task
     Close(CloseCommand),
 
-    /// Add and remove tags/labels of issues/tasks
+    /// Add and remove tags/labels from issue/task
     #[command(subcommand)]
     Tags(TagsCommand),
 
-    /// List Providers
-    Providers,
+    /// List issue/task stores
+    IssueStores,
 
-    /// Show Jira Transitions Providers
+    /// Show Jira Transitions allowed for a given ID
     JiraTransitions { id: String },
+
+    /// default action, list all issues
+    List {
+
+        /// Limit the activity to one issue/task provider
+        #[arg(short, long)]
+        issue_store_id: Option<String>,
+
+    }
 }
 
 #[derive(Debug, clap::Args)]
 struct CloseCommand {
     #[arg(help = "ID of the task to close")]
     id: String,
+
 }
 
 impl FromStr for CloseCommand {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(CloseCommand { id: s.to_string() })
+        Ok(CloseCommand { id: s.to_string()})
     }
 }
 
@@ -104,6 +115,7 @@ struct TagOperationParameters {
 
     // Tag/Label names
     tags: Vec<String>,
+
 }
 
 async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
@@ -122,7 +134,8 @@ async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
             title,
             details,
             tags,
-        }) => add_new_task(&args.provider_id, config, title, details, tags).await?,
+            issue_store_id,
+        }) => add_new_task(issue_store_id, config, title, details, tags).await?,
         Some(Command::Close(close_cmd)) => {
             close_task(config, close_cmd.id.clone()).await?;
         }
@@ -134,13 +147,14 @@ async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
             let tag_set: &HashSet<String> = &tag_removals.tags.clone().into_iter().collect();
             remove_tags_from_task(config, tag_removals.id.clone(), tag_set).await?;
         }
-        Some(Command::Providers) => {
-            list_providers(config).await?;
+        Some(Command::IssueStores) => {
+            list_issue_stores(config).await?;
         }
         Some(Command::JiraTransitions { id }) => {
             list_jira_transition_ids(&config.jira[0], id).await?;
         }
-        None => aggregate_and_display_all_tasks(&args.provider_id, config, colors).await?,
+        Some(Command::List{ issue_store_id }) => aggregate_and_display_all_tasks(issue_store_id, config, colors).await?,
+        None => aggregate_and_display_all_tasks(&None, config, colors).await?,
     };
 
     Ok(())

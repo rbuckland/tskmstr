@@ -1,13 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use anyhow::{Result};
+use anyhow::Result;
 use reqwest::{header::HeaderMap, Client};
 use serde_json::json;
 
-use base64::{
-    engine::{general_purpose},
-    Engine as _,
-};
+use base64::{engine::general_purpose, Engine as _};
 
 use super::model::{JiraConfig, JiraIssue, JiraProject};
 use crate::providers::{common::credentials::HasSecretToken, jira::model::JiraResult};
@@ -15,7 +12,7 @@ use crate::providers::{
     common::model::{Issue, Label},
     jira::model::JiraIssueType,
 };
-use log::{debug};
+use log::debug;
 
 pub fn construct_jira_basic_auth_header(username: &str, token: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
@@ -27,7 +24,7 @@ pub fn construct_jira_basic_auth_header(username: &str, token: &str) -> HeaderMa
 
 pub async fn collect_tasks_from_jira(
     jira_config: &Vec<JiraConfig>,
-    provider_id: &Option<String>,
+    issue_store_id: &Option<String>,
 ) -> Result<Vec<Issue>, anyhow::Error> {
     let client = Client::new();
     let mut all_issues = Vec::new();
@@ -36,13 +33,18 @@ pub async fn collect_tasks_from_jira(
         for (_idx, project) in j
             .projects
             .iter()
-            .filter(|&r| provider_id.is_none() || provider_id.as_deref().is_some_and(|p| r.id == p))
+            .filter(|&r| issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p))
             .enumerate()
         {
+            let optional_filter = project
+                .filter
+                .as_ref()
+                .map_or("".to_string(), |filt| format!(" AND {}", filt));
+
             // Construct the Jira API URL for fetching issues
             let url = format!(
-                "{}/rest/api/3/search?jql=project={} AND resolution = unresolved&maxResults=1000",
-                j.endpoint, project.project_key
+                "{}/rest/api/3/search?jql=project={} AND resolution = unresolved{}&maxResults=1000",
+                j.endpoint, project.project_key, optional_filter
             );
 
             debug!("{}", url);
