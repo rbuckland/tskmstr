@@ -65,6 +65,9 @@ pub struct GitLabRepository {
 
     /// Defauls configuration
     pub defaults: Option<Defaults>,
+
+    /// filter certain issues
+    pub filter: Option<String>,
 }
 
 impl IssueTaskRepository for GitLabRepository {

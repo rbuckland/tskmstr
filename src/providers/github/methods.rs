@@ -33,6 +33,7 @@ pub async fn close_task_github(
         "{}/repos/{}/{}/issues/{}",
         github_config.endpoint, repo_config.owner, repo_config.repo, &issue_id
     );
+
     debug!("github: will close {}", url);
 
     let response = client
@@ -64,7 +65,7 @@ pub async fn close_task_github(
 
 pub async fn collect_tasks_from_github(
     github_config: &Vec<GitHubConfig>,
-    provider_id: &Option<String>,
+    issue_store_id: &Option<String>,
 ) -> Result<Vec<Issue>, anyhow::Error> {
     let client = Client::new();
     let mut all_issues = Vec::new(); // Create a vector to collect all issues
@@ -73,10 +74,20 @@ pub async fn collect_tasks_from_github(
         for (_idx, repo) in g
             .repositories
             .iter()
-            .filter(|&r| provider_id.is_none() || provider_id.as_deref().is_some_and(|p| r.id == p))
+            .filter(|&r| issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p))
             .enumerate()
         {
-            let url = format!("{}/repos/{}/{}/issues", g.endpoint, repo.owner, repo.repo);
+            let optional_filter = repo
+                .filter
+                .as_ref()
+                .map_or("".to_string(), |filt| format!("?{}", filt));
+
+            let url = format!(
+                "{}/repos/{}/{}/issues{}",
+                g.endpoint, repo.owner, repo.repo, optional_filter
+            );
+
+            debug!("github:get issues {}", url);
 
             let response = client
                 .get(&url)
@@ -101,10 +112,12 @@ pub async fn collect_tasks_from_github(
                 all_issues.extend(issues); // Add the collected issues to the vector
             } else {
                 println!(
-                    "Error: Unable to fetch issues for {}/{}. Status: {:?}",
+                    "Error: Unable to fetch issues for {}/{}. Status: {:?}. Error: {:?}",
                     repo.owner,
                     repo.repo,
-                    response.status()
+                    response.status(),
+                    response.text().await?,
+
                 );
             }
         }

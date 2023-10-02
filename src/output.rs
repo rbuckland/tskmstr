@@ -163,7 +163,7 @@ pub async fn aggregate_and_display_all_tasks(
     Ok(())
 }
 
-pub async fn list_providers(config: &AppConfig) -> Result<(), anyhow::Error> {
+pub async fn list_issue_stores(config: &AppConfig) -> Result<(), anyhow::Error> {
     
     for g in &config.github_com {
         for x in &g.repositories {

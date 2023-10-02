@@ -99,6 +99,9 @@ pub struct JiraProject {
 
     /// Defauls configuration
     pub defaults: Option<Defaults>,
+
+    /// filter certain issues
+    pub filter: Option<String>,
 }
 
 impl IssueTaskRepository for JiraProject {
