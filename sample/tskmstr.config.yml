@@ -25,66 +25,86 @@ colors:
 
 
 labels:
-  # if any issue has one of these labels, 
-  # they will be shown in this list
+  # if any issue has one of these labels, it will be grouped and put at the top
   priority_labels:
     - urgent
     - todo
   # if a task has a deadline, it is considered priority, also
   # if the due date is before this time (regardless of having urgent/todo label)
-  priority_timeframe: 48hrs
+  priority_timeframe: 48hrs # not supported yet
 
 #
 # Configuration for gitlab
 #
 gitlab.com:
-  credential:
-    # the service item in yout keyring
-    service: gitlab.com
+    # unique id (only used for display)
+  - provider_id: gitlab repo/myusername
+    credential:
+      # the service item in yout keyring
+      service: gitlab.com
 
-    # the username in your keyring
-    username: myusername_in_keyring_entry_pat
-  
-  # a list of repositories to query, given the credentials above
-  repositories:
-     # id: make it unique
-     # a short code, used to distinquish the tasks, differed to the other task/issue providers
-     # a great set of unicode characters are here
-     # https://www.compart.com/en/unicode/category/So
-    - id: 🅆
-      color: blue
+      # the username in your keyring
+      username: myusername_in_keyring_entry_pat
+    
+    # a list of repositories to query, given the credentials above
+    repositories:
+      # id: make it unique
+      # a short code, used to distinquish the tasks, differed to the other task/issue providers
+      # a great set of unicode characters are here
+      # https://www.compart.com/en/unicode/category/So
+      - id: 🅆
+        color: blue
 
-      # the gitlab project Number, or string (with %2F for the /'s )
-      project_id: someorg%2Fmy-tasks
+        # the gitlab project Number, or string (with %2F for the /'s )
+        project_id: someorg%2Fmy-tasks
 
-      # common default parameters
-      defaults:
-        for_new_tasks: true
+        # common default parameters
+        defaults:
+          for_new_tasks: true
 
-    - id: 🄿
-      color: green    
-      project_id: someorg%2Fmy-tasks
-      defaults:
-        for_new_tasks: true
+        # optional filter 
+        # ref: https://docs.gitlab.com/ee/api/issues.html
+        filter: labels=abc
+        # gitlab "labels" are "AND'd" so the following is
+        #
+        #    issues with label abc AND foobar
+        # 
+        # filter: labels=abc,foobar
+
+      - id: 🄿
+        color: green    
+        project_id: someorg%2Fmy-tasks
+        defaults:
+          for_new_tasks: true
 
 #
 # Configuration for github
 #
 github.com:
-  credential:
-    service: github.com
-    username: some_pat_username_in_keyring
-  repositories:
-    - id: T # this is the actual tasks for task master
-      color: blue
-      owner: org-owner
-      repo: reponame
-    - id: 🄿
-      color: blue
-      owner: other-org-owner
-      repo: repo-name
-      defaults:
-        for_new_tasks: true # technically just one repo/provider has this field.
+    # unique id (only used for display)
+  - provider_id: github repo/myusername
+    credential:
+      service: github.com
+      username: some_pat_username_in_keyring
+    repositories:
+      - id: T # this is the actual tasks for task master
+        color: blue
+        owner: org-owner
+        repo: reponame
+
+        # optional filter - extra query parameters
+        # https://docs.github.com/en/rest/issues/issues?apiVersion=2022-11-28#list-repository-issues--parameters
+
+        filter: labels=team-x,team-support
+        # filter: assignee=username
+        # filter: assignee=username&labels=support
+      
+      - id: 🄿
+        color: blue
+        owner: other-org-owner
+        repo: repo-name
+        defaults:
+          for_new_tasks: true # technically just one repo/provider has this field.
 
 #
 # Configuration for jira
@@ -111,7 +131,17 @@ jira:
         # where, you have a working config, and can see tasks. 
         # this will then show the appropriate transitions available for that task
         # grab the id: and stick below
-        close_transition_id: 31 
+        close_transition_id: 31
+
+        # https://support.atlassian.com/jira-software-cloud/docs/jql-operators/
+        # Internally in tskmstr, the JQL query is
+        # 
+        #    project={} AND resolution = unresolved
+        # 
+        # the filter is appended as AND to the above
+        #
+        filter: labels in (label2, label9)
+        # filter: assignee = currentUser()
         
         defaults:
           for_new_tasks: true
