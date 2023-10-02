@@ -18,8 +18,9 @@
     - [Listing Tasks](#listing-tasks)
     - [Adding a Task](#adding-a-task)
     - [Closing a Task](#closing-a-task)
-  - [Adding and Removing Labels](#adding-and-removing-labels)
-  - [Listing Issue Stores](#listing-issue-stores)
+    - [Adding and Removing Labels](#adding-and-removing-labels)
+    - [Listing Issue Stores](#listing-issue-stores)
+    - [Filtering](#filtering)
   - [Command Reference](#command-reference)
   - [Features](#features)
   - [Building](#building)
@@ -299,7 +300,7 @@ Replace `<issue_id>` with the ID of the task you want to close. (e.g. `Ⓐ/22`, 
 The issue ID is listed when you run `tskmstr` or `tskmstr list [-i <id>]`
 
 
-## Adding and Removing Labels
+### Adding and Removing Labels
 
 You can add and remove labels from a task using the tag add and tag remove commands:
 
@@ -310,16 +311,36 @@ tskmstr tags remove <issue_id> tag1 tag2 tag3
 # example: 
 tskmstr tags remove J/PROJ-2 this-label that-label another-label
 ```
-## Listing Issue Stores
+### Listing Issue Stores
 
 ```
 > tskmstr issue-stores
-T - https://api.github.com/user/repos
+T - https://api.github.com/uation ser/repos
 🄿 - https://api.github.com/user/tskmstr-tasks
 🅆 - https://gitlab.com/username%2Fsome-sub-repo
 ```
 
 Use this to determine the `-i <id>` you need to use for `tskmstr add -i <id> <tile> <details> [<tag>...]`
+
+### Filtering
+
+In the configuration you can set static filters for each issue store (project, repository).
+
+This can be used when 
+- you only need to see your personal tickets
+- you only need to see issues related to your team
+- you only want to see issues that are related to a phase in your workflow
+
+The filtering utilises the underlying providers extra query parameters 
+
+| Provider | Filtering Technique | Documentation | Example / Notes   |
+|----------|---------------------|---------------|------------|
+| GitHub   | Query Parameters    | [REST API Issues Query Params](https://docs.github.com/en/rest/issues/issues?apiVersion=2022-11-28#list-repository-issues--parameters)              | Example:<br/>`filter: labels=team-x,team-support`<br/>`filter: assignee=username`<br/>`filter: assignee=username&labels=support`
+| GitLab   | Query Parameters    | [REST API Issues Query Params](https://docs.gitlab.com/ee/api/issues.html)              | Example:<br/>`filter: labels=team-x,team-support`<br/>`filter: assignee_username=username`<br/>`filter: assignee_username=username&labels=support` <br/>Labels are AND'd not OR'd
+| Jira     | JQL                 | [JQL](https://support.atlassian.com/jira-software-cloud/docs/jql-operators/) |  The filter is appended to <br/> `project={} AND resolution = unresolved` <br/>Example:<br/>`filter: labels in (label2, label9) AND assignee = currentUser() ` |
+
+Filtering is perhaps the core feature you will want. The idea being, at the CLI you just want to know what YOU need to do today. 
+
 ## Command Reference
 
 The full command help can be obtained with `--help`
