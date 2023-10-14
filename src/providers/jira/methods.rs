@@ -340,3 +340,36 @@ pub async fn list_jira_transition_ids(
     }
     Ok(())
 }
+
+pub async fn add_comment_to_jira_issue(
+    jira_config: &JiraConfig,
+    issue_key: &str,
+    comment: &str,
+) -> Result<(), reqwest::Error> {
+    let client = reqwest::Client::new();
+
+    // Construct the Jira API URL for creating a new comment
+    let url = format!(
+        "{}/rest/api/2/issue/{}/comment",
+        jira_config.endpoint, issue_key
+    );
+
+    let comment_json = json!({
+        "body": comment
+    });
+
+    let response = client
+        .post(&url)
+        .headers(construct_jira_basic_auth_header(&jira_config.get_username(), &jira_config.get_token()))
+        .json(&comment_json)
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        println!("Comment added successfully.");
+    } else {
+        eprintln!("Error: Unable to add a comment to the issue. Status: {:?}", response.status());
+    }
+
+    Ok(())
+}
