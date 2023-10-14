@@ -251,3 +251,37 @@ pub async fn remove_labels_from_gitlab_issue(
         Err(anyhow!(error_msg))
     }
 }
+
+
+pub async fn add_comment_to_gitlab_issue(
+    gitlab_repo: &GitLabRepository,
+    gitlab_config: &GitLabConfig,
+    issue_iid: &String,
+    comment: &str,
+) -> Result<(), reqwest::Error> {
+    let client = reqwest::Client::new();
+
+    // Construct the GitLab API URL for creating a new comment
+    let url = format!(
+        "{}/api/v4/projects/{}/issues/{}/notes",
+        gitlab_config.endpoint, gitlab_repo.project_id, issue_iid
+    );
+
+    let mut form = reqwest::multipart::Form::new();
+    form = form.text("body", comment.to_string());
+
+    let response = client
+        .post(&url)
+        .headers(construct_gitlab_header(&gitlab_config.get_token()))
+        .multipart(form)
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        println!("Comment added successfully.");
+    } else {
+        eprintln!("Error: Unable to add a comment to the issue. Status: {:?}", response.status());
+    }
+
+    Ok(())
+}
