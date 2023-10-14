@@ -299,6 +299,12 @@ tskmstr close JIRA/ABC-123
 Replace `<issue_id>` with the ID of the task you want to close. (e.g. `Ⓐ/22`, `gh2/444`)
 The issue ID is listed when you run `tskmstr` or `tskmstr list [-i <id>]`
 
+### Commenting on a task
+
+```
+❯ t comment J/ITA-9 "fixed issue, now testing" 
+Comment added successfully.
+```
 
 ### Adding and Removing Labels
 
@@ -347,6 +353,7 @@ The full command help can be obtained with `--help`
 * `list`: List all tasks/issues, grouped by labels and priority.
 * `add <title> <details> [ tags,... ]`: Add a new task/issue to the default repository.
 * `close <issue_id>`: Close a task/issue.
+* `comment <issue_id> <comment>`: Add a comment to a task/issue
 * `tags add <issue_id>`: Add tags to a task.
 * `tags remove <issue_id>`: Remove tags from a task.
 * `issue-stores`: list the configured issues-stores (repositories, todo lists)

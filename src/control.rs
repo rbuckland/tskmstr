@@ -7,14 +7,15 @@ use crate::config::{AppConfig, TaskIssueProvider};
 
 use crate::providers::github::methods::{
     add_labels_to_github_issue, add_new_task_github, close_task_github,
-    remove_labels_from_github_issue,
+    remove_labels_from_github_issue, add_comment_to_github_issue,
 };
+use crate::providers::github::model::NewComment;
 use crate::providers::gitlab::methods::{
     add_labels_to_gitlab_issue, add_new_task_gitlab, close_task_gitlab,
-    remove_labels_from_gitlab_issue,
+    remove_labels_from_gitlab_issue, add_comment_to_gitlab_issue,
 };
 use crate::providers::jira::methods::{
-    add_labels_to_jira_issue, add_new_task_jira, close_issue_jira, remove_labels_from_jira_issue,
+    add_labels_to_jira_issue, add_new_task_jira, close_issue_jira, remove_labels_from_jira_issue, add_comment_to_jira_issue,
 };
 
 
@@ -152,3 +153,31 @@ pub async fn close_task(app_config: &AppConfig, provider_and_issue: String) -> R
 
     Ok(())
 }
+
+
+pub async fn comment_task(app_config: &AppConfig, provider_and_issue: String, comment: String) -> Result<()> {
+    let details: Vec<&str> = provider_and_issue.split('/').collect();
+    let provider_id = details.first()
+        .unwrap_or_else(|| panic!("Provider ID was invalid"));
+    let issue_id = details
+        .get(1)
+        .unwrap_or_else(|| panic!("Issue ID was invalid"))
+        .to_string();
+    let repository = &app_config
+        .find_provider_by_id(provider_id)?
+        .unwrap_or_else(|| panic!("Provider was not found"));
+
+    match repository {
+        TaskIssueProvider::GitHub(github_config, repo_config) => {
+            add_comment_to_github_issue(repo_config, github_config, &issue_id, NewComment { body: comment }).await?
+        }
+        TaskIssueProvider::GitLab(gitlab_config, repo_config) => {
+            add_comment_to_gitlab_issue(repo_config, gitlab_config, &issue_id, comment.as_str()).await?
+        }
+        TaskIssueProvider::Jira(jira_config, _) => {
+            add_comment_to_jira_issue(jira_config, &issue_id, comment.as_str()).await?
+        }
+    }
+
+    Ok(())
+}    
