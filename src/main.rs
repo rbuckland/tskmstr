@@ -1,15 +1,12 @@
 #![feature(fn_traits)]
 #![feature(unboxed_closures)]
 
-
 use anyhow::Result;
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
 
 use clap::{Parser, Subcommand};
 use providers::jira::methods::list_jira_transition_ids;
-
-
 
 mod config;
 mod control;
@@ -58,11 +55,13 @@ enum Command {
         /// Limit the activity to one issue/task repository
         #[arg(short, long)]
         issue_store_id: Option<String>,
-
     },
 
     /// Close a task
     Close(CloseCommand),
+
+    /// Add a comment/note to a issue/task
+    Comment(CommentCommand),
 
     /// Add and remove tags/labels from issue/task
     #[command(subcommand)]
@@ -72,11 +71,12 @@ enum Command {
     IssueStores,
 
     /// Show Jira Transitions allowed for a given ID
-    JiraTransitions { id: String },
+    JiraTransitions {
+        id: String,
+    },
 
     /// default action, list all issues
     List {
-
         /// Limit the activity to one issue/task provider
         #[arg(short, long)]
         issue_store_id: Option<String>,
@@ -84,21 +84,28 @@ enum Command {
         /// Show all details
         #[arg(short, long)]
         all: bool,
-    }
+    },
 }
 
 #[derive(Debug, clap::Args)]
 struct CloseCommand {
-    #[arg(help = "ID of the task to close")]
+    /// ID of the issue/task to close
     id: String,
+}
 
+#[derive(Debug, clap::Args)]
+struct CommentCommand {
+    /// ID of the issue/task to add a comment to
+    id: String,
+    /// New Comment to add to the issue/task
+    comment: String,
 }
 
 impl FromStr for CloseCommand {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(CloseCommand { id: s.to_string()})
+        Ok(CloseCommand { id: s.to_string() })
     }
 }
 
@@ -118,7 +125,6 @@ struct TagOperationParameters {
 
     // Tag/Label names
     tags: Vec<String>,
-
 }
 
 async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
@@ -142,6 +148,9 @@ async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
         Some(Command::Close(close_cmd)) => {
             close_task(config, close_cmd.id.clone()).await?;
         }
+        Some(Command::Comment(comment_cmd)) => {
+            comment_task(config, comment_cmd.id.clone(), comment_cmd.comment.clone()).await?;
+        }
         Some(Command::Tags(TagsCommand::Add(tag_additions))) => {
             let tag_set: &HashSet<String> = &tag_additions.tags.clone().into_iter().collect();
             add_tags_to_task(config, tag_additions.id.clone(), tag_set).await?;
@@ -156,7 +165,10 @@ async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
         Some(Command::JiraTransitions { id }) => {
             list_jira_transition_ids(&config.jira[0], id).await?;
         }
-        Some(Command::List{ issue_store_id , all }) => aggregate_and_display_all_tasks(issue_store_id, config, colors, &all).await?,
+        Some(Command::List {
+            issue_store_id,
+            all,
+        }) => aggregate_and_display_all_tasks(issue_store_id, config, colors, &all).await?,
         None => aggregate_and_display_all_tasks(&None, config, colors, &false).await?,
     };
 
