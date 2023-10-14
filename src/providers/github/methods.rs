@@ -12,7 +12,7 @@ use crate::providers::{common::model::Label, github::model::GitHubIssue};
 
 use serde_json::json;
 
-use super::model::GitHubRepository;
+use super::model::{GitHubRepository, NewComment};
 
 pub fn construct_github_header(token: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
@@ -252,6 +252,35 @@ pub async fn remove_labels_from_github_issue(
             );
             return Err(anyhow!(error_msg));
         }
+    }
+
+    Ok(())
+}
+
+pub async fn add_comment_to_github_issue(
+    github_repo: &GitHubRepository,
+    github_config: &GitHubConfig,
+    issue_number: &String,
+    new_comment: NewComment,
+) -> Result<(), reqwest::Error> {
+    let client = reqwest::Client::new();
+
+    let url = format!(
+        "{}/repos/{}/{}/issues/{}/comments",
+        github_config.endpoint, github_repo.owner, github_repo.repo, issue_number
+    );
+
+    let response = client
+        .post(&url)
+        .headers(construct_github_header(&github_config.get_token()))
+        .json(&new_comment)
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        println!("Comment added successfully.");
+    } else {
+        eprintln!("Error: Unable to add a comment to the issue. Status: {:?}", response.status());
     }
 
     Ok(())

@@ -2,7 +2,7 @@ use colored::Color;
 use serde_inline_default::serde_inline_default;
 use std::str::FromStr;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{Defaults, IssueTaskRepository},
@@ -84,4 +84,10 @@ impl IssueTaskRepository for GitHubRepository {
     fn id(&self) -> String {
         self.id.clone()
     }
+}
+
+
+#[derive(Deserialize, Serialize)]
+pub struct NewComment {
+    pub body: String,
 }
