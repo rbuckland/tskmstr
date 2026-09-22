@@ -26,8 +26,10 @@ pub struct JiraIssue {
 #[derive(Debug, Deserialize, Clone)]
 pub struct JiraFields {
     pub summary: String,
+    #[allow(dead_code)]
     pub description: Option<JiraDescription>,
     pub labels: Option<Vec<String>>,
+    #[allow(dead_code)]
     pub issuetype: Option<JiraIssueType>,
 }
 
@@ -38,16 +40,19 @@ pub struct JiraIssueType {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct JiraDescription {
+    #[allow(dead_code)]
     pub content: Vec<JiraDescriptionContent>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct JiraDescriptionContent {
+    #[allow(dead_code)]
     pub content: Vec<JiraDescriptionContentItem>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct JiraDescriptionContentItem {
+    #[allow(dead_code)]
     pub text: String,
 }
 
@@ -85,6 +90,7 @@ pub struct JiraProject {
     pub id: String,
 
     /// In output, Where color is appropriate, together with the ID, this will be used
+    #[allow(dead_code)]
     pub color: String,
 
     /// the Jira project key, e.g., "PROJ123"

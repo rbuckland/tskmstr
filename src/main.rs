@@ -1,6 +1,3 @@
-#![feature(fn_traits)]
-#![feature(unboxed_closures)]
-
 use anyhow::Result;
 #[allow(unused_imports)]
 use log::{debug, error, info, warn};
@@ -19,7 +16,6 @@ use std::{collections::HashSet, path::PathBuf, str::FromStr};
 
 use output::{aggregate_and_display_all_tasks, list_issue_stores};
 
-use directories::ProjectDirs;
 
 #[derive(Debug, Parser)]
 #[command(name = "t")]
@@ -28,9 +24,8 @@ struct Cli {
     #[arg(short, long)]
     debug: bool,
 
-    /// Config file default is "~/.config/tskmstr/tskmstr.config.yml"
-    /// For Windows %LOCALAPPDATA%/tskmstr/tskmstr.config.yml
-    /// For OSX ~/Library/Preferences/tskmstr/tskmstr.config.yml
+    /// Config file default is "~/.config/tskmstr/tskmstr.config.yml" (all platforms)
+    /// Override with --config <path>
     #[arg(short, long)]
     config: Option<String>,
 
@@ -69,6 +64,13 @@ enum Command {
 
     /// List issue/task stores
     IssueStores,
+
+    /// Initialise a new tskmstr configuration file
+    Init {
+        /// Overwrite an existing config file if present
+        #[arg(short, long)]
+        force: bool,
+    },
 
     /// Show Jira Transitions allowed for a given ID
     JiraTransitions {
@@ -162,6 +164,10 @@ async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
         Some(Command::IssueStores) => {
             list_issue_stores(config).await?;
         }
+        Some(Command::Init { .. }) => {
+            // handled in main before config loading
+            unreachable!()
+        }
         Some(Command::JiraTransitions { id }) => {
             list_jira_transition_ids(&config.jira[0], id).await?;
         }
@@ -178,23 +184,126 @@ async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let args = Cli::parse();
-    // Read the repository configuration from YAML
 
     let config_file = match &args.config {
         Some(x) => PathBuf::from(x).as_os_str().to_owned(),
         None => {
-            let proj_dirs = ProjectDirs::from("org", "inosion", "tskmstr")
-                .unwrap_or_else(|| panic!("No Config directory found"));
-            let mut config_dir = proj_dirs.config_dir().as_os_str().to_owned();
-            config_dir.push("/tskmstr.config.yml");
-            config_dir
+            let home = std::env::var("HOME")
+                .unwrap_or_else(|_| panic!("HOME environment variable not set"));
+            let mut p = std::ffi::OsString::from(home);
+            p.push("/.config/tskmstr/tskmstr.config.yml");
+            p
         }
     };
-    let filename = config_file.clone().into_string().unwrap();
+    let config_path = PathBuf::from(&config_file);
 
+    // Handle init before attempting to load config
+    if let Some(Command::Init { force }) = &args.cmd {
+        return do_init(&config_path, *force);
+    }
+
+    let filename = config_file.clone().into_string().unwrap();
     let contents = std::fs::read_to_string(&config_file)
         .expect(format!("Failed to open file {}", filename).as_str());
     let config: AppConfig = serde_yaml::from_str(&contents)
         .expect(format!("Failed to load file {}", filename).as_str());
     do_work(&args, &config).await
+}
+
+fn do_init(config_path: &PathBuf, force: bool) -> Result<(), anyhow::Error> {
+    if config_path.exists() && !force {
+        anyhow::bail!(
+            "Config file already exists at {}. Use --force to overwrite.",
+            config_path.display()
+        );
+    }
+
+    if let Some(parent) = config_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let template = r#"# tskmstr configuration
+# Documentation: https://github.com/rbuckland/tskmstr
+
+colors:
+  tags: green
+  title: blue
+  issue_id: red
+
+labels:
+  priority_labels:
+    - urgent
+    - todo
+
+# ---------------------------------------------------------------------------
+# GitHub configuration  (remove this section if not used)
+# ---------------------------------------------------------------------------
+# Store your Personal Access Token in the OS keyring (service + username must match below):
+#   macOS:  security add-generic-password -U -s github.com -a <username> -w
+#   Linux:  secret-tool store --label='tskmstr github' service github.com username <username>
+#   Any:    keyring set github.com <username>
+# ---------------------------------------------------------------------------
+github.com:
+  - provider_id: github/myusername
+    credential:
+      service: github.com
+      username: myusername
+    repositories:
+      - id: G
+        color: blue
+        owner: my-org
+        repo: my-repo
+        defaults:
+          for_new_tasks: true
+        # filter: labels=my-label
+
+# ---------------------------------------------------------------------------
+# GitLab configuration  (remove this section if not used)
+# ---------------------------------------------------------------------------
+# Store your Personal Access Token in the OS keyring (service + username must match below):
+#   macOS:  security add-generic-password -U -s gitlab.com -a <username> -w
+#   Linux:  secret-tool store --label='tskmstr gitlab' service gitlab.com username <username>
+#   Any:    keyring set gitlab.com <username>
+# ---------------------------------------------------------------------------
+gitlab.com:
+  - provider_id: gitlab/myusername
+    credential:
+      service: gitlab.com
+      username: myusername
+    repositories:
+      - id: L
+        color: green
+        project_id: myorg%2Fmy-project
+        defaults:
+          for_new_tasks: false
+
+# ---------------------------------------------------------------------------
+# Jira configuration  (remove this section if not used)
+# ---------------------------------------------------------------------------
+# Store your API token in the OS keyring (username must be your Jira login email):
+#   macOS:  security add-generic-password -U -s yourinstance.atlassian.net -a user@example.com -w
+#   Linux:  secret-tool store --label='tskmstr jira' service yourinstance.atlassian.net username user@example.com
+#   Any:    keyring set yourinstance.atlassian.net user@example.com
+# ---------------------------------------------------------------------------
+jira:
+  - provider_id: My Jira
+    endpoint: https://yourinstance.atlassian.net
+    credential:
+      service: yourinstance.atlassian.net
+      username: user@example.com
+    projects:
+      - id: J
+        color: yellow
+        project_key: PROJ
+        default_issue_type: Task
+        close_transition_id: 31
+        defaults:
+          for_new_tasks: false
+        # filter: assignee = currentUser()
+"#;
+
+    std::fs::write(config_path, template)?;
+    println!("Created config file: {}", config_path.display());
+    println!("Edit it to add your repositories, then store credentials in the OS keyring.");
+    Ok(())
 }

@@ -64,15 +64,17 @@ Before using **tskmstr**, you need to configure it with your GitHub, Jira and/or
 
 Refer to the comprehensive sample configuration [sample-config](sample/tskmstr.config.yml), that provides a good set of examples.
 
-This config file needs to go into:
+The config file lives at `~/.config/tskmstr/tskmstr.config.yml` on all platforms
+(Linux, macOS and Windows). You can override the location with `--config <path>`.
 
-- Linux - `~/.config/tskmstr/tskmstr.config.yml`
-- Windows - `%LOCALAPPDATA%/tskmstr/tskmstr.config.yml`
-- Mac OSX - `~/Library/Preferences/tskmstr/tskmstr.config.yml`
+1. Create the config file. The quickest way is to let **tskmstr** write a commented template for you:
 
-You can override the config file with `--config`
+    ```sh
+    tskmstr init          # creates ~/.config/tskmstr/tskmstr.config.yml
+    tskmstr init --force  # overwrite an existing file
+    ```
 
-1. Create a new file `~/.config/tskmstr/tskmstr.config.yml`
+    Then edit it, removing the provider sections you don't use. A complete example looks like this:
 
     ```yaml
 
@@ -138,23 +140,43 @@ to each issue/task individually across the aggregated set.
 
 You can configure colors, set priority labels, and specify your repositories on both GitHub and GitLab.
 
-2. Put your PAT / API Token passwords into the OS Keyring. 
+2. Put your PAT / API Token passwords into the OS Keyring.
 
-To add your credentials to the keyring, use the following command for each service:
-```
-keyring set github.com key_username_in_keyring
-keyring set gitlab.com key_username_in_keyring
+**tskmstr** never stores tokens in the config file. Each `credential:` block names a
+keyring entry by `service` and `username`, and the token is read from your OS keyring
+at runtime. Store one entry per provider, using the same `service` and `username`
+values you put in the config.
+
+**macOS** (built-in `security` tool, writes to the login Keychain):
+
+```sh
+security add-generic-password -U -s github.com -a <username> -w
+security add-generic-password -U -s gitlab.com -a <username> -w
+security add-generic-password -U -s <your-jira-instance>.atlassian.net -a user@example.com -w
 ```
 
-For jira, it needs to look like 
+With `-w` and no value, `security` prompts for the token so it stays out of your shell
+history. `-U` updates the entry if it already exists.
 
-```
-keyring set <your-jira-instance> <jirs-username>
-# example
-keyring set special.atlassian.net user@foobar.com
+**Linux** (GNOME Keyring / KWallet via `secret-tool`, from `libsecret-tools`):
+
+```sh
+secret-tool store --label='tskmstr github' service github.com username <username>
+secret-tool store --label='tskmstr gitlab' service gitlab.com username <username>
+secret-tool store --label='tskmstr jira' service <your-jira-instance>.atlassian.net username user@example.com
 ```
 
-**note, on Ubuntu the `keyring` CLI tool is provided by `python3-keyring`
+**Any platform** (Python `keyring` CLI, on Ubuntu from `python3-keyring`):
+
+```sh
+keyring set github.com <username>
+keyring set gitlab.com <username>
+keyring set <your-jira-instance>.atlassian.net user@example.com
+```
+
+For GitHub and GitLab, `<username>` is just the lookup key for the keyring entry and
+does not have to be your account name. For Jira it must be the email you log in with,
+because it is sent along with the API token for authentication.
 
 Now you're ready to start using tskmstr!
 
@@ -357,6 +379,7 @@ The full command help can be obtained with `--help`
 * `tags add <issue_id>`: Add tags to a task.
 * `tags remove <issue_id>`: Remove tags from a task.
 * `issue-stores`: list the configured issues-stores (repositories, todo lists)
+* `init [--force]`: write a template config file to `~/.config/tskmstr/tskmstr.config.yml`
 * `jira-transitions` <ISSUE-ID> # special required for configuring jira
 
 ## Features

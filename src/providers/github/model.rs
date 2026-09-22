@@ -58,6 +58,7 @@ pub struct GitHubRepository {
     pub id: String,
 
     /// In output, Where color is appropriate, together with the ID, this will be used
+    #[allow(dead_code)]
     pub color: String,
 
     /// the github Owner of the repository

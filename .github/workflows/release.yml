@@ -20,13 +20,13 @@ jobs:
 
         - build: x86_64-linux
           os: ubuntu-22.04
-          rust: nightly
+          rust: stable
           target: x86_64-unknown-linux-gnu
           artifact_name: tskmstr
           asset_name: tskmstr-linux-amd64          
         - build: aarch64-linux
           os: ubuntu-22.04
-          rust: nightly
+          rust: stable
           target: aarch64-unknown-linux-gnu
           cross: true
           artifact_name: tskmstr
@@ -34,7 +34,7 @@ jobs:
 
         - build: x86_64-macos
           os: macos-latest
-          rust: nightly
+          rust: stable
           target: x86_64-apple-darwin
           cross: false
           artifact_name: tskmstr
@@ -42,7 +42,7 @@ jobs:
         # TODO ? FIX - not sure why it doesn't build
         # - build: aarch64-macos
         #   os: macos-latest
-        #   rust: nightly
+        #   rust: stable
         #   cross: true
         #   target: aarch64-apple-darwin
         #   artifact_name: tskmstr
@@ -50,14 +50,14 @@ jobs:
 
         - build: x86_64-windows
           os: windows-2019
-          rust: nightly
+          rust: stable
           target: x86_64-pc-windows-msvc
           cross: false
           artifact_name: tskmstr.exe
           asset_name: tskmstr-windows-amd64
         # - build: aarch64-windows
         #   os: windows-2019
-        #   rust: nightly
+        #   rust: stable
         #   target: aarch64-pc-windows-msvc
         #   cross: true
         #   artifact_name: tskmstr.exe
@@ -65,7 +65,7 @@ jobs:
 
         # - build: x86_64-freebsd
         #   os: ubuntu-22.04
-        #   rust: nightly
+        #   rust: stable
         #   cross: true
         #   target: x86_64-unknown-freebsd
         #   artifact_name: tskmstr

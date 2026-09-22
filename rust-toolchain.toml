@@ -1,5 +1,2 @@
 [toolchain]
-# we are using nicer Fn features
-#![feature(fn_traits)] Fn
-#![feature(unboxed_closures)] (no Box<Fn....>
-channel = "nightly"
+channel = "stable"

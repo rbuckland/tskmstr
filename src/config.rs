@@ -33,6 +33,7 @@ pub struct AppConfig {
 #[derive(Debug, Deserialize, Clone)]
 pub struct LabelConfig {
     pub priority_labels: HashSet<String>,
+    #[allow(dead_code)]
     pub priority_timeframe: Option<String>,
 }
 
@@ -51,6 +52,7 @@ pub struct Defaults {
     pub for_new_tasks: Option<bool>,
     /// Set this repository to show in the quick list.
     /// If this field is NOT set on any provider, then all will be displayed
+    #[allow(dead_code)]
     pub for_display: Option<bool>,
 }
 
@@ -59,6 +61,7 @@ pub trait IssueTaskRepository {
 
     fn id(&self) -> String;
 
+    #[allow(dead_code)]
     fn color(&self) -> Color;
 
     fn is_default(&self) -> bool {
