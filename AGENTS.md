@@ -3,7 +3,7 @@
 ## Build & Run
 
 ```sh
-# Requires nightly Rust (rust-toolchain.toml pins this automatically)
+# Requires stable Rust (rust-toolchain.toml pins `channel = "stable"`)
 cargo build
 cargo build --release
 
@@ -61,14 +61,13 @@ All API tokens are stored in the **OS keyring** (never in config files). Config 
 ### `serde_inline_default`
 Used extensively on config structs to provide field-level defaults (e.g., `endpoint`, `provider_id`, `default_issue_type`). Apply `#[serde_inline_default]` on the struct and `#[serde_inline_default(expr)]` on fields that need defaults.
 
-### Nightly Rust
-The project uses `#![feature(fn_traits)]` and `#![feature(unboxed_closures)]` for the `find_by` closure pattern in `config.rs`. The `rust-toolchain.toml` pins `channel = "nightly"` — this is intentional.
+### Stable Rust
+The project builds on stable Rust; `rust-toolchain.toml` pins `channel = "stable"` and CI uses the stable toolchain. Do not reintroduce nightly-only `#![feature(...)]` gates.
 
 ### Config file location
-- Linux: `~/.config/tskmstr/tskmstr.config.yml`
-- macOS: `~/Library/Preferences/tskmstr/tskmstr.config.yml`
-- Windows: `%LOCALAPPDATA%/tskmstr/tskmstr.config.yml`
+- All platforms: `$HOME/.config/tskmstr/tskmstr.config.yml` (resolved in `main.rs` from the `HOME` env var; no `directories` crate)
 - Override with `--config <path>`
+- `tskmstr init [--force]` writes a commented template config to that path. It is handled in `main()` before the config is loaded, so its `do_work` match arm is `unreachable!()`.
 
 ### Filtering
 Each issue store supports a `filter:` string in config. GitHub/GitLab filters are appended as query parameters; Jira filters are appended to a base JQL query (`project={} AND resolution = unresolved AND <filter>`).
