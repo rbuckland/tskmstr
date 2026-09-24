@@ -22,14 +22,14 @@ pub trait HasSecretToken {
                 .unwrap_or_else(|_| {
                     panic!(
                         "failed to get the keyring for {}/{}",
-                        &cke.service, &cke.username
+                        cke.service, cke.username
                     )
                 })
                 .get_password()
                 .unwrap_or_else(|_| {
                     panic!(
                         "failed to get the API token for {}/{}",
-                        &cke.service, &cke.username
+                        cke.service, cke.username
                     )
                 }),
             _ => panic!(

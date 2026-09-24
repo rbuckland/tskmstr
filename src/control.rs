@@ -37,8 +37,8 @@ pub async fn add_new_task(
     details: &str,
     tags: &Option<Vec<String>>,
 ) -> Result<(), anyhow::Error> {
-    debug!("creating new task {} {:?}", &title, &tags);
-    debug!("default provider is {:?}", &config.find_default_provider());
+    debug!("creating new task {} {:?}", title, tags);
+    debug!("default provider is {:?}", config.find_default_provider());
 
     let x = match provider_id {
         None => config

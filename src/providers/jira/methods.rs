@@ -30,14 +30,9 @@ pub async fn collect_tasks_from_jira(
     let mut all_issues = Vec::new();
 
     for j in jira_config {
-        for (_idx, project) in j
-            .projects
-            .iter()
-            .filter(|&r| {
-                issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p)
-            })
-            .enumerate()
-        {
+        for project in j.projects.iter().filter(|&r| {
+            issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p)
+        }) {
             let optional_filter = project
                 .filter
                 .as_ref()

@@ -34,7 +34,7 @@ pub async fn close_task_github(
 
     let url = format!(
         "{}/repos/{}/{}/issues/{}",
-        github_config.endpoint, repo_config.owner, repo_config.repo, &issue_id
+        github_config.endpoint, repo_config.owner, repo_config.repo, issue_id
     );
 
     debug!("github: will close {}", url);
@@ -74,14 +74,9 @@ pub async fn collect_tasks_from_github(
     let mut all_issues = Vec::new(); // Create a vector to collect all issues
 
     for g in github_config {
-        for (_idx, repo) in g
-            .repositories
-            .iter()
-            .filter(|&r| {
-                issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p)
-            })
-            .enumerate()
-        {
+        for repo in g.repositories.iter().filter(|&r| {
+            issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p)
+        }) {
             let optional_filter = repo
                 .filter
                 .as_ref()

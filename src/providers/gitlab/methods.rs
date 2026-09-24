@@ -32,7 +32,7 @@ pub async fn close_task_gitlab(
 
     let url = format!(
         "{}/api/v4/projects/{}/issues/{}?state_event=close",
-        &gitlab_config.endpoint, repo_config.project_id, &issue_id
+        gitlab_config.endpoint, repo_config.project_id, issue_id
     );
 
     debug!("gitlab: will close {}", url);
@@ -67,14 +67,9 @@ pub async fn collect_tasks_from_gitlab(
     let mut all_issues = Vec::new();
 
     for g in gitlab_config {
-        for (_idx, repo) in g
-            .repositories
-            .iter()
-            .filter(|&r| {
-                issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p)
-            })
-            .enumerate()
-        {
+        for repo in g.repositories.iter().filter(|&r| {
+            issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p)
+        }) {
             let optional_filter = repo
                 .filter
                 .as_ref()
@@ -132,7 +127,7 @@ pub async fn add_new_task_gitlab(
     details: &str,
     tags: &Option<Vec<String>>,
 ) -> Result<(), anyhow::Error> {
-    debug!("Adding a new task via gitlab: {} [{:?}]", &title, &tags);
+    debug!("Adding a new task via gitlab: {} [{:?}]", title, tags);
 
     let client = Client::new();
 

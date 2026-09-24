@@ -10,11 +10,11 @@ use reqwest::{
 use serde_json::json;
 
 use super::model::{GoogleTask, GoogleTaskList, GoogleTasksConfig, GoogleTasksListResponse};
+use crate::providers::common::{credentials::HasSecretToken, model::Comment};
 use crate::providers::common::{
     model::{Issue, IssueDetail, Label},
     oauth::{refresh_access_token, OAuth2RefreshConfig},
 };
-use crate::providers::common::{credentials::HasSecretToken, model::Comment};
 
 fn construct_google_tasks_header(access_token: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
