@@ -124,7 +124,7 @@ jobs:
           ref: ${{ needs.version.outputs.tag }}
       - uses: dtolnay/rust-toolchain@stable
       - name: Install GTK / AppIndicator development libraries
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libxdo-dev libayatana-appindicator3-dev
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libxdo-dev libayatana-appindicator3-dev fonts-noto-core
       - name: Install nfpm
         run: |
           curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" \

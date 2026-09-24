@@ -66,30 +66,44 @@ pub struct TrayApp {
     settle_frames: u8,
 }
 
-/// System fonts that cover the Enclosed Alphanumeric Supplement (U+1F130..),
+/// System fonts that may cover the Enclosed Alphanumeric Supplement (U+1F130..),
 /// which store ids such as `🄿` or `🅆` use. egui's bundled fonts lack these.
+/// Each is checked for coverage before use: DejaVu Sans, for example, does not.
 const SYMBOL_FONT_CANDIDATES: &[&str] = &[
     "/System/Library/Fonts/Apple Symbols.ttf",
     "C:\\Windows\\Fonts\\seguisym.ttf",
-    "/usr/share/fonts/noto/NotoSansSymbols-Regular.ttf",
     "/usr/share/fonts/truetype/noto/NotoSansSymbols-Regular.ttf",
+    "/usr/share/fonts/noto/NotoSansSymbols-Regular.ttf",
     "/usr/share/fonts/google-noto/NotoSansSymbols-Regular.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/TTF/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/ancient-scripts/Symbola_hint.ttf",
+    "/usr/share/fonts/TTF/Symbola.ttf",
 ];
 
-/// Append the first available symbol font as the lowest-priority fallback
-/// for both font families, so issue ids render instead of showing a box.
+/// Characters a candidate font must contain to be used as the fallback.
+const SYMBOL_FONT_PROBE: &str = "🄰🄿🅆🅉";
+
+/// The first candidate that exists and covers [`SYMBOL_FONT_PROBE`].
+fn find_symbol_font() -> Option<(&'static str, Vec<u8>)> {
+    use ab_glyph::{Font, FontRef};
+
+    SYMBOL_FONT_CANDIDATES.iter().find_map(|path| {
+        let bytes = std::fs::read(path).ok()?;
+        let font = FontRef::try_from_slice(&bytes).ok()?;
+        SYMBOL_FONT_PROBE
+            .chars()
+            .all(|c| font.glyph_id(c).0 != 0)
+            .then_some((*path, bytes))
+    })
+}
+
+/// Append a symbol font as the lowest-priority fallback for both font
+/// families, so issue ids render instead of showing a box.
 fn add_symbol_fallback_font(ctx: &egui::Context) {
     use egui::epaint::text::{FontInsert, FontPriority, InsertFontFamily};
     use egui::{FontData, FontFamily};
 
-    let Some((path, bytes)) = SYMBOL_FONT_CANDIDATES
-        .iter()
-        .find_map(|p| std::fs::read(p).ok().map(|b| (*p, b)))
-    else {
-        warn!("no symbol fallback font found; enclosed-letter store ids may not render");
+    let Some((path, bytes)) = find_symbol_font() else {
+        warn!("no symbol fallback font found (install Noto Sans Symbols); enclosed-letter store ids may not render");
         return;
     };
     debug!("using symbol fallback font {path}");
@@ -570,10 +584,7 @@ mod tests {
     /// Store ids like `🅆/6` must render in the panel, not as a missing-glyph box.
     #[test]
     fn enclosed_letter_ids_have_glyphs() {
-        if !SYMBOL_FONT_CANDIDATES
-            .iter()
-            .any(|p| std::path::Path::new(p).exists())
-        {
+        if find_symbol_font().is_none() {
             eprintln!("no symbol font installed; skipping");
             return;
         }
@@ -583,7 +594,7 @@ mod tests {
             .textures_delta
             .clear();
         for font_id in [FontId::monospace(13.0), FontId::proportional(13.5)] {
-            assert!(ctx.fonts_mut(|f| f.has_glyphs(&font_id, "🄿🅆🄰🅉")));
+            assert!(ctx.fonts_mut(|f| f.has_glyphs(&font_id, SYMBOL_FONT_PROBE)));
         }
     }
 }

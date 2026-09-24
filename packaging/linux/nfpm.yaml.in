@@ -49,6 +49,9 @@ overrides:
       - libgtk-3-0
       - libxdo3
       - libayatana-appindicator3-1 | libappindicator3-1
+    recommends:
+      # symbol font for enclosed-letter store ids (🄿, 🅆) in the tray panel
+      - fonts-noto-core
   apk:
     depends:
       - gtk+3.0
