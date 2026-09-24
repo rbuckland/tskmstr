@@ -1,124 +1,212 @@
+# Release pipeline: on a `v*` tag, build the CLI (`tskmstr`) and the tray
+# widget (`tskmstr-tray`) and publish installable packages for every platform:
+#
+#   macOS    tskmstr-<v>-macos-universal.dmg        (.app + CLI, universal binaries)
+#   Linux    tskmstr_<v>_amd64.deb                  (Debian/Ubuntu)
+#            tskmstr_<v>_x86_64.apk                 (Alpine, musl build)
+#            tskmstr-<v>-linux-amd64.tar.gz
+#            tskmstr-<v>-linux-arm64-cli.tar.gz     (CLI only, cross-compiled)
+#   Windows  tskmstr-<v>-windows-x64.msi            (per-user installer)
+#            tskmstr-<v>-windows-x64.zip
+#   SHA256SUMS
+#
+# The packaging logic lives in packaging/ so it can be run locally; this file
+# only wires it up.
 name: release
+
 on:
   push:
     tags:
       - v*
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 env:
-  PROJECT_NAME: tskmstr
-  REPO_NAME: rbuckland/tskmstr
-  
+  CARGO_TERM_COLOR: always
+  NFPM_VERSION: 2.47.0
+
 jobs:
-  release:
-    name: release ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        build: [x86_64-linux, aarch64-linux,  x86_64-macos, x86_64-windows]
-        include:
-
-        - build: x86_64-linux
-          os: ubuntu-22.04
-          rust: stable
-          target: x86_64-unknown-linux-gnu
-          artifact_name: tskmstr
-          asset_name: tskmstr-linux-amd64          
-        - build: aarch64-linux
-          os: ubuntu-22.04
-          rust: stable
-          target: aarch64-unknown-linux-gnu
-          cross: true
-          artifact_name: tskmstr
-          asset_name: tskmstr-linux-aarch64
-
-        - build: x86_64-macos
-          os: macos-latest
-          rust: stable
-          target: x86_64-apple-darwin
-          cross: false
-          artifact_name: tskmstr
-          asset_name: tskmstr-osx-amd64
-        # TODO ? FIX - not sure why it doesn't build
-        # - build: aarch64-macos
-        #   os: macos-latest
-        #   rust: stable
-        #   cross: true
-        #   target: aarch64-apple-darwin
-        #   artifact_name: tskmstr
-        #   asset_name: tskmstr-osx-aarch64          
-
-        - build: x86_64-windows
-          os: windows-2019
-          rust: stable
-          target: x86_64-pc-windows-msvc
-          cross: false
-          artifact_name: tskmstr.exe
-          asset_name: tskmstr-windows-amd64
-        # - build: aarch64-windows
-        #   os: windows-2019
-        #   rust: stable
-        #   target: aarch64-pc-windows-msvc
-        #   cross: true
-        #   artifact_name: tskmstr.exe
-        #   asset_name: tskmstr-windows-aarch64
-
-        # - build: x86_64-freebsd
-        #   os: ubuntu-22.04
-        #   rust: stable
-        #   cross: true
-        #   target: x86_64-unknown-freebsd
-        #   artifact_name: tskmstr
-        #   asset_name: tskmstr-freebsd-amd64
+  version:
+    name: version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
     steps:
-      - name: Checkout Source
-        uses: actions/checkout@master
-      - name: Install ${{ matrix.rust }} toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          target: ${{ matrix.target }}
-          override: true
-
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: ${{ matrix.cross }}
-          command: test
-          args: --release --locked --target ${{ matrix.target }}
-
-      - name: Build release binary
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: ${{ matrix.cross }}
-          command: build
-          args: --release --locked --target ${{ matrix.target }}
-
-      # - name: Strip the binary
-      #   uses: actions-rs/cargo@v1
-      #   with:
-      #     use-cross: ${{ matrix.cross }}
-      #     command: strip
-      #     args: --target ${{ matrix.target }}
-
-      - name: Strip release binary (.. non-cross compiled)
-        if: matrix.cross == 'false'
-        run: cargo strip --target ${{ matrix.target }}
-
-      - name: Strip release binary (.. cross compiled)
-        if: matrix.cross == 'true'
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+      - name: Tag must match Cargo.toml version
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
-          docker run --rm -v \
-            "$PWD/target:/target:Z" \
-            rustembedded/cross:${{ matrix.target }} \
-            cargo strip --target ${{ matrix.target }}
+          test "v${{ steps.v.outputs.version }}" = "${GITHUB_REF_NAME}" \
+            || { echo "tag ${GITHUB_REF_NAME} != Cargo.toml v${{ steps.v.outputs.version }}"; exit 1; }
 
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
+  linux:
+    name: linux amd64 (deb, tgz)
+    needs: version
+    runs-on: ubuntu-22.04
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install GTK / AppIndicator development libraries
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libxdo-dev libayatana-appindicator3-dev
+      - name: Install nfpm
+        run: |
+          curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin nfpm
+      - name: Test
+        run: cargo test --release --locked --features tray
+      - name: Build
+        run: cargo build --release --locked --features tray
+      - name: Package
+        run: |
+          ./target/release/tskmstr-tray render-icon --out-dir "$PWD/assets"
+          packaging/linux/build-packages.sh "$VERSION" amd64 "$PWD/target/release" "$PWD/assets" "$PWD/dist" deb tgz
+      - uses: actions/upload-artifact@v4
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
-          asset_name: ${{ matrix.asset_name }}
-          tag: ${{ github.ref }}
-          overwrite: true 
+          name: linux-amd64
+          path: dist/*
+
+  linux-arm64-cli:
+    name: linux arm64 (CLI only, tgz)
+    needs: version
+    runs-on: ubuntu-22.04
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cross
+      - name: Build (cross)
+        run: cross build --release --locked --target aarch64-unknown-linux-gnu --bin tskmstr
+      - name: Package
+        run: |
+          PKG="tskmstr-${VERSION}-linux-arm64-cli"
+          mkdir -p "stage/$PKG" dist
+          cp target/aarch64-unknown-linux-gnu/release/tskmstr README.md LICENSE "stage/$PKG/"
+          tar -C stage -czf "dist/$PKG.tar.gz" "$PKG"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64-cli
+          path: dist/*
+
+  alpine:
+    name: alpine x86_64 (apk)
+    needs: version
+    runs-on: ubuntu-latest
+    # musl build of the GUI stack is the least battle-tested target: do not
+    # block the release on it.
+    continue-on-error: true
+    container: rust:alpine
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          apk add --no-cache bash build-base musl-dev pkgconf curl tar git \
+            openssl-dev gtk+3.0-dev libayatana-appindicator-dev xdotool-dev
+      - name: Install nfpm
+        run: |
+          curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" \
+            | tar -xz -C /usr/local/bin nfpm
+      - name: Build
+        run: cargo build --release --locked --features tray
+      - name: Package
+        run: |
+          ./target/release/tskmstr-tray render-icon --out-dir "$PWD/assets"
+          packaging/linux/build-packages.sh "$VERSION" amd64 "$PWD/target/release" "$PWD/assets" "$PWD/dist" apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alpine-x86_64
+          path: dist/*
+
+  macos:
+    name: macos universal (dmg)
+    needs: version
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+      - name: Test
+        run: cargo test --release --locked --features tray
+      - name: Build (arm64 + x86_64)
+        run: |
+          cargo build --release --locked --features tray --target aarch64-apple-darwin
+          cargo build --release --locked --features tray --target x86_64-apple-darwin
+      - name: Universal binaries
+        run: |
+          mkdir -p bin
+          for b in tskmstr tskmstr-tray; do
+            lipo -create -output "bin/$b" \
+              "target/aarch64-apple-darwin/release/$b" "target/x86_64-apple-darwin/release/$b"
+            lipo -info "bin/$b"
+          done
+      - name: Package (.app + CLI in a DMG)
+        run: |
+          ./bin/tskmstr-tray render-icon --out-dir assets
+          packaging/macos/build-app.sh "$VERSION" bin/tskmstr-tray bin/tskmstr assets/tskmstr.icns staging
+          mkdir -p dist
+          packaging/macos/build-dmg.sh staging "dist/tskmstr-${VERSION}-macos-universal.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal
+          path: dist/*
+
+  windows:
+    name: windows x64 (msi, zip)
+    needs: version
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test
+        run: cargo test --release --locked --features tray
+      - name: Build
+        run: cargo build --release --locked --features tray
+      - name: Install WiX
+        run: dotnet tool install --global wix
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          & .\target\release\tskmstr-tray.exe render-icon --out-dir assets
+          wix build packaging\windows\tskmstr.wxs `
+            -d "Version=$env:VERSION" -d "BinDir=target\release" -d "IcoFile=assets\tskmstr.ico" `
+            -o "dist\tskmstr-$env:VERSION-windows-x64.msi"
+          New-Item -ItemType Directory -Force stage | Out-Null
+          Copy-Item target\release\tskmstr.exe, target\release\tskmstr-tray.exe, assets\tskmstr.ico, README.md, LICENSE stage\
+          Copy-Item target\release\tskmstr.exe stage\t.exe
+          Compress-Archive -Path stage\* -DestinationPath "dist\tskmstr-$env:VERSION-windows-x64.zip" -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: dist/*
+
+  release:
+    name: publish GitHub release
+    needs: [version, linux, linux-arm64-cli, alpine, macos, windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: |
+          cd dist && ls -la && sha256sum * > SHA256SUMS && cat SHA256SUMS
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

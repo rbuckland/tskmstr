@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=tskmstr tray
+GenericName=Task tray widget
+Comment=Open tasks from GitHub, GitLab and Jira in your system tray
+Exec=tskmstr-tray
+Icon=tskmstr-tray
+Terminal=false
+Categories=Utility;Office;ProjectManagement;
+Keywords=tasks;issues;github;gitlab;jira;
+StartupNotify=false

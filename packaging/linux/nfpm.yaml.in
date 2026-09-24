@@ -1,0 +1,56 @@
+# nfpm (https://nfpm.goreleaser.com) package definition template, shared by
+# the .deb and Alpine .apk builds. build-packages.sh substitutes:
+#   ${VERSION}  package version (from Cargo.toml)
+#   ${ARCH}     amd64 | arm64 (nfpm maps to x86_64 / aarch64 for apk)
+#   ${BINDIR}   directory holding the built `tskmstr` and `tskmstr-tray`
+#   ${ASSETS}   directory holding app-icon-*.png (from `tskmstr-tray render-icon`)
+name: tskmstr
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+section: utils
+priority: optional
+maintainer: Ramon Buckland <ramon@thebuckland.com>
+vendor: Ramon Buckland
+homepage: https://github.com/rbuckland/tskmstr
+license: MIT
+description: |
+  Aggregates your tasks and issues from GitHub, GitLab and Jira.
+  Ships the `tskmstr` CLI and the `tskmstr-tray` system tray widget.
+
+contents:
+  - src: ${BINDIR}/tskmstr
+    dst: /usr/bin/tskmstr
+    file_info:
+      mode: 0755
+  - src: ${BINDIR}/tskmstr-tray
+    dst: /usr/bin/tskmstr-tray
+    file_info:
+      mode: 0755
+  - src: /usr/bin/tskmstr
+    dst: /usr/bin/t
+    type: symlink
+  - src: packaging/linux/tskmstr-tray.desktop
+    dst: /usr/share/applications/tskmstr-tray.desktop
+  - src: ${ASSETS}/app-icon-256.png
+    dst: /usr/share/icons/hicolor/256x256/apps/tskmstr-tray.png
+  - src: ${ASSETS}/app-icon-128.png
+    dst: /usr/share/icons/hicolor/128x128/apps/tskmstr-tray.png
+  - src: ${ASSETS}/app-icon-48.png
+    dst: /usr/share/icons/hicolor/48x48/apps/tskmstr-tray.png
+  - src: README.md
+    dst: /usr/share/doc/tskmstr/README.md
+  - src: LICENSE
+    dst: /usr/share/doc/tskmstr/LICENSE
+
+overrides:
+  deb:
+    depends:
+      - libgtk-3-0
+      - libxdo3
+      - libayatana-appindicator3-1 | libappindicator3-1
+  apk:
+    depends:
+      - gtk+3.0
+      - xdotool
+      - libayatana-appindicator
