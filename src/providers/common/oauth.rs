@@ -2,6 +2,19 @@ use anyhow::Result;
 use reqwest::Client;
 use serde::Deserialize;
 
+fn percent_encode(input: &str) -> String {
+    input
+        .bytes()
+        .flat_map(|byte| match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                vec![byte as char]
+            }
+            b' ' => vec!['+'],
+            _ => format!("%{:02X}", byte).chars().collect(),
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone)]
 pub struct OAuth2RefreshConfig {
     pub client_id: String,
@@ -18,12 +31,16 @@ struct OAuth2RefreshResponse {
 pub async fn refresh_access_token(config: &OAuth2RefreshConfig) -> Result<String> {
     let response = Client::new()
         .post(&config.token_endpoint)
-        .form(&[
-            ("client_id", config.client_id.as_str()),
-            ("client_secret", config.client_secret.as_str()),
-            ("refresh_token", config.refresh_token.as_str()),
-            ("grant_type", "refresh_token"),
-        ])
+        .header(
+            reqwest::header::CONTENT_TYPE,
+            "application/x-www-form-urlencoded",
+        )
+        .body(format!(
+            "client_id={}&client_secret={}&refresh_token={}&grant_type=refresh_token",
+            percent_encode(&config.client_id),
+            percent_encode(&config.client_secret),
+            percent_encode(&config.refresh_token)
+        ))
         .send()
         .await?;
 

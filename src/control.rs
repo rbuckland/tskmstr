@@ -208,8 +208,7 @@ pub async fn comment_task(
             add_comment_to_jira_issue(jira_config, &issue_id, comment.as_str()).await?
         }
         TaskIssueProvider::GoogleTasks(google_config, tasklist) => {
-            add_comment_to_google_task(tasklist, google_config, &issue_id, comment.as_str())
-                .await?
+            add_comment_to_google_task(tasklist, google_config, &issue_id, comment.as_str()).await?
         }
     }
 

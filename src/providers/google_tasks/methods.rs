@@ -14,16 +14,13 @@ use crate::providers::common::{
     model::{Issue, IssueDetail, Label},
     oauth::{refresh_access_token, OAuth2RefreshConfig},
 };
-use crate::providers::{
-    common::{credentials::HasSecretToken, model::Comment},
-    google_tasks::model::GoogleTasksOAuth2Config,
-};
+use crate::providers::common::{credentials::HasSecretToken, model::Comment};
 
 fn construct_google_tasks_header(access_token: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert(
         AUTHORIZATION,
-        format!("******", access_token).parse().unwrap(),
+        format!("{}{}", "Bearer ", access_token).parse().unwrap(),
     );
     headers
 }
@@ -165,7 +162,9 @@ async fn patch_task(
     let client = Client::new();
     let response = client
         .patch(task_url(config, tasklist, task_id))
-        .headers(construct_google_tasks_header(&get_access_token(config).await?))
+        .headers(construct_google_tasks_header(
+            &get_access_token(config).await?,
+        ))
         .header(reqwest::header::CONTENT_TYPE, "application/json")
         .json(&body)
         .send()
@@ -245,7 +244,9 @@ pub async fn add_new_task_google_tasks(
             "{}/tasks/v1/lists/{}/tasks",
             config.endpoint, tasklist.tasklist_id
         ))
-        .headers(construct_google_tasks_header(&get_access_token(config).await?))
+        .headers(construct_google_tasks_header(
+            &get_access_token(config).await?,
+        ))
         .header(reqwest::header::CONTENT_TYPE, "application/json")
         .json(&json!({
             "title": title,
@@ -275,7 +276,10 @@ pub async fn close_task_google_tasks(
     task_id: &str,
 ) -> Result<()> {
     patch_task(tasklist, config, task_id, json!({ "status": "completed" })).await?;
-    println!("Task {} closed in Google Tasks list: {}", task_id, tasklist.tasklist_id);
+    println!(
+        "Task {} closed in Google Tasks list: {}",
+        task_id, tasklist.tasklist_id
+    );
     Ok(())
 }
 
@@ -328,7 +332,9 @@ async fn fetch_google_task(
     let client = Client::new();
     let response = client
         .get(task_url(config, tasklist, task_id))
-        .headers(construct_google_tasks_header(&get_access_token(config).await?))
+        .headers(construct_google_tasks_header(
+            &get_access_token(config).await?,
+        ))
         .send()
         .await?;
 

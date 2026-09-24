@@ -210,7 +210,8 @@ impl AppConfig {
         }
 
         for gt in &self.google_tasks {
-            if let Some(found_tasklist) = gt.tasklists.iter().find(|&tasklist| f(Box::new(tasklist)))
+            if let Some(found_tasklist) =
+                gt.tasklists.iter().find(|&tasklist| f(Box::new(tasklist)))
             {
                 return Ok(Some(TaskIssueProvider::GoogleTasks(
                     gt.clone(),
@@ -378,7 +379,11 @@ impl AppConfig {
                 provider_id: gt.provider_id.clone(),
                 kind: ProviderKind::GoogleTasks,
                 endpoint: gt.endpoint.clone(),
-                store_ids: gt.tasklists.iter().map(|tasklist| tasklist.id.clone()).collect(),
+                store_ids: gt
+                    .tasklists
+                    .iter()
+                    .map(|tasklist| tasklist.id.clone())
+                    .collect(),
             });
         }
 

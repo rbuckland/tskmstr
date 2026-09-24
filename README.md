@@ -48,6 +48,7 @@ It aggregates your TODO/Task/Work items from
 - github issues
 - gitlab issues
 - jira issues
+- google tasks
 
 You can use a private repo on gitlab, or github to store your personal **TODO** items, and aggregate these with opensource, and private projects you contribute and work on.
 
@@ -140,7 +141,7 @@ Prefer no installer? Unzip `tskmstr-<v>-windows-x64.zip` anywhere and add the fo
 
 ## Configuration
 
-Before using **tskmstr**, you need to configure it with your GitHub, Jira and/or GitLab credentials. **tskmstr** reads your credentials securely from your OS keyring.
+Before using **tskmstr**, you need to configure it with your GitHub, Jira, GitLab and/or Google Tasks credentials. **tskmstr** reads your credentials securely from your OS keyring.
 
 Refer to the comprehensive sample configuration [sample-config](sample/tskmstr.config.yml), that provides a good set of examples.
 
@@ -219,11 +220,26 @@ The config file lives at `~/.config/tskmstr/tskmstr.config.yml` on all platforms
             close_transition_id: 31
             filter: labels in (label2, label9) AND assignee = currentUser()            
 
+    google_tasks:
+      - provider_id: google-tasks
+        credential:
+          service: google-tasks
+          username: kermit@acme.com
+        oauth2:
+          client_id: your-google-oauth-client-id
+          client_secret: your-google-oauth-client-secret
+        tasklists:
+          - id: GT
+            color: cyan
+            tasklist_id: "@default"
+            # Task notes can end with a footer such as "#home, #todo";
+            # tskmstr reads those as tags/labels.
+    
     ```
 Each repository needs a unique character (one or more letters assigned), so you can refer
 to each issue/task individually across the aggregated set.
 
-You can configure colors, set priority labels, and specify your repositories on both GitHub and GitLab.
+You can configure colors, set priority labels, and specify your issue stores across all supported providers.
 
 2. Put your PAT / API Token passwords into the OS Keyring.
 
@@ -238,6 +254,7 @@ values you put in the config.
 security add-generic-password -U -s github.com -a <username> -w
 security add-generic-password -U -s gitlab.com -a <username> -w
 security add-generic-password -U -s <your-jira-instance>.atlassian.net -a kermit@acme.com -w
+security add-generic-password -U -s google-tasks -a user@gmail.com -w
 ```
 
 With `-w` and no value, `security` prompts for the token so it stays out of your shell
@@ -249,6 +266,7 @@ history. `-U` updates the entry if it already exists.
 secret-tool store --label='tskmstr github' service github.com username <username>
 secret-tool store --label='tskmstr gitlab' service gitlab.com username <username>
 secret-tool store --label='tskmstr jira' service <your-jira-instance>.atlassian.net username kermit@acme.com
+secret-tool store --label='tskmstr google tasks' service google-tasks username user@gmail.com
 ```
 
 **Any platform** (Python `keyring` CLI, on Ubuntu from `python3-keyring`):
@@ -257,6 +275,7 @@ secret-tool store --label='tskmstr jira' service <your-jira-instance>.atlassian.
 keyring set github.com <username>
 keyring set gitlab.com <username>
 keyring set <your-jira-instance>.atlassian.net kermit@acme.com
+keyring set google-tasks user@gmail.com
 ```
 
 For GitHub and GitLab, `<username>` is just the lookup key for the keyring entry and

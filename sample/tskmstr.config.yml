@@ -146,3 +146,25 @@ jira:
         defaults:
           for_new_tasks: true
 
+#
+# Configuration for Google Tasks
+# The keyring password is the OAuth refresh token. The task notes footer can
+# contain comma-separated #tags, which tskmstr maps into labels.
+#
+google_tasks:
+  - provider_id: google-tasks
+    credential:
+      service: google-tasks
+      username: user@gmail.com
+    oauth2:
+      client_id: your-google-oauth-client-id
+      client_secret: your-google-oauth-client-secret
+      # token_endpoint defaults to https://oauth2.googleapis.com/token
+    tasklists:
+      - id: GT
+        color: cyan
+        tasklist_id: "@default"
+        defaults:
+          for_new_tasks: false
+        # optional filter - extra query parameters passed to tasks.list
+        # filter: maxResults=100
