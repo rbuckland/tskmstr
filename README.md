@@ -272,9 +272,9 @@ tskmstr
 
 Example output looks like below. 
 In this example, the ID's for the repos are
-    * 🅆 - for a work repository
-    * Ⓐ - for a application repository
-    * 🄿 - for a personal repository (which has no code, just tasks to do)
+  - 🅆 - for a work repository
+  - Ⓐ - for a application repository
+  - 🄿 - for a personal repository (which has no code, just tasks to do)
 
 ```
 Priority: now, urgent, todo
@@ -337,7 +337,36 @@ Each of the "repositories" has a unique ID which comes from the config file `<gl
 
 ^ tags was chosen because it is less to "type" on the command line. But really tags and labels are synonymous.
 
-**Provider** - a provider is the "system", github/gitlab/jira. In the configuration, this is a `provider_id:`.
+**Provider** - a provider is the "system", github/gitlab/jira along with the associated credential required to login to that system. If you have a personal, and a work github account, that is two providers. In the configuration, this is a `provider_id:`.
+  An example of the config for a work and personal github looks like
+
+  ```
+  ...
+  github.com:
+  - provider_id: github/kermitfrog_acme
+    credential:
+      service: github.com
+      username: kermitfrog_acme
+    repositories:
+    - id: KTF
+      color: green
+      owner: kermitfrog_acme
+      repo: tasks
+    - id: W
+      color: red
+      owner: kermitfrog_acme
+      repo: lib-cool-puppet
+      defaults:
+        for_new_tasks: true
+  - provider_id: github/kermitthefrog
+    credential:
+      service: github.com
+      username: kermitthefrog
+    - id: ME
+      color: grey
+      owner: kermitthefrog
+      repo: tasks-for-personal
+  ```
              
 
 **Issue Store, Issue/Task Repository** - specific configured repository of a provider. (it is synonymous with a `repository`) - the provider of issues. This is the "IssueStoreID" In the configuration it is `id:`
