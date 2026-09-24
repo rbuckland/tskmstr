@@ -6,6 +6,7 @@ use std::str::FromStr;
 
 use crate::providers::github::model::{GitHubConfig, GitHubRepository};
 use crate::providers::gitlab::model::{GitLabConfig, GitLabRepository};
+use crate::providers::google_tasks::model::{GoogleTaskList, GoogleTasksConfig};
 use crate::providers::jira::model::{JiraConfig, JiraProject};
 
 #[serde_inline_default]
@@ -31,7 +32,9 @@ pub struct AppConfig {
 
     #[serde_inline_default(Vec::<JiraConfig>::new())]
     pub jira: Vec<JiraConfig>,
-    // pub google_tasks: Vec<GoogleTaskConfig>,
+
+    #[serde_inline_default(Vec::<GoogleTasksConfig>::new())]
+    pub google_tasks: Vec<GoogleTasksConfig>,
 }
 
 /// Controls how the task list is grouped and ordered.
@@ -83,6 +86,7 @@ pub enum TaskIssueProvider {
     GitHub(GitHubConfig, GitHubRepository),
     GitLab(GitLabConfig, GitLabRepository),
     Jira(JiraConfig, JiraProject),
+    GoogleTasks(GoogleTasksConfig, GoogleTaskList),
 }
 
 /// Configure a task/issue source as default for some behaviour
@@ -159,6 +163,12 @@ impl AppConfig {
             }
         }
 
+        for gt in &self.google_tasks {
+            for tasklist in &gt.tasklists {
+                provider_ids.push(tasklist.id.clone());
+            }
+        }
+
         provider_ids
     }
 
@@ -199,6 +209,16 @@ impl AppConfig {
             }
         }
 
+        for gt in &self.google_tasks {
+            if let Some(found_tasklist) = gt.tasklists.iter().find(|&tasklist| f(Box::new(tasklist)))
+            {
+                return Ok(Some(TaskIssueProvider::GoogleTasks(
+                    gt.clone(),
+                    found_tasklist.clone(),
+                )));
+            }
+        }
+
         Ok(None)
     }
 }
@@ -217,6 +237,7 @@ impl Default for AppConfig {
             github_com: Vec::new(),
             gitlab_com: Vec::new(),
             jira: Vec::new(),
+            google_tasks: Vec::new(),
             labels: LabelConfig {
                 priority_labels: HashSet::new(),
                 priority_timeframe: None,
@@ -263,6 +284,7 @@ pub enum ProviderKind {
     GitHub,
     GitLab,
     Jira,
+    GoogleTasks,
 }
 
 impl ProviderKind {
@@ -272,6 +294,7 @@ impl ProviderKind {
             ProviderKind::GitHub => "github.com",
             ProviderKind::GitLab => "gitlab.com",
             ProviderKind::Jira => "jira",
+            ProviderKind::GoogleTasks => "google_tasks",
         }
     }
 
@@ -280,6 +303,7 @@ impl ProviderKind {
         match self {
             ProviderKind::GitHub | ProviderKind::GitLab => "repositories",
             ProviderKind::Jira => "projects",
+            ProviderKind::GoogleTasks => "tasklists",
         }
     }
 
@@ -290,6 +314,7 @@ impl ProviderKind {
             ProviderKind::GitHub => "github.com",
             ProviderKind::GitLab => "gitlab.com",
             ProviderKind::Jira => "jira",
+            ProviderKind::GoogleTasks => "google-tasks",
         }
     }
 }
@@ -300,6 +325,7 @@ impl std::fmt::Display for ProviderKind {
             ProviderKind::GitHub => write!(f, "github"),
             ProviderKind::GitLab => write!(f, "gitlab"),
             ProviderKind::Jira => write!(f, "jira"),
+            ProviderKind::GoogleTasks => write!(f, "google"),
         }
     }
 }
@@ -344,6 +370,15 @@ impl AppConfig {
                 kind: ProviderKind::Jira,
                 endpoint: j.endpoint.clone(),
                 store_ids: j.projects.iter().map(|p| p.id.clone()).collect(),
+            });
+        }
+
+        for gt in &self.google_tasks {
+            out.push(ProviderSummary {
+                provider_id: gt.provider_id.clone(),
+                kind: ProviderKind::GoogleTasks,
+                endpoint: gt.endpoint.clone(),
+                store_ids: gt.tasklists.iter().map(|tasklist| tasklist.id.clone()).collect(),
             });
         }
 
@@ -442,6 +477,9 @@ pub fn add_issue_store(
                 );
             }
             store.insert("project_key".into(), target.into());
+        }
+        ProviderKind::GoogleTasks => {
+            store.insert("tasklist_id".into(), target.into());
         }
     }
 

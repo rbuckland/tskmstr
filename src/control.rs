@@ -15,6 +15,10 @@ use crate::providers::gitlab::methods::{
     add_comment_to_gitlab_issue, add_labels_to_gitlab_issue, add_new_task_gitlab,
     close_task_gitlab, remove_labels_from_gitlab_issue, view_issue_gitlab,
 };
+use crate::providers::google_tasks::methods::{
+    add_comment_to_google_task, add_labels_to_google_task, add_new_task_google_tasks,
+    close_task_google_tasks, remove_labels_from_google_task, view_issue_google_task,
+};
 use crate::providers::jira::methods::{
     add_comment_to_jira_issue, add_labels_to_jira_issue, add_new_task_jira, close_issue_jira,
     remove_labels_from_jira_issue, view_issue_jira,
@@ -59,6 +63,9 @@ pub async fn add_new_task(
         TaskIssueProvider::Jira(jira_config, project) => {
             add_new_task_jira(&project, &jira_config, title, details, tags).await?
         }
+        TaskIssueProvider::GoogleTasks(google_config, tasklist) => {
+            add_new_task_google_tasks(&tasklist, &google_config, title, details, tags).await?
+        }
     }
 
     Ok(())
@@ -90,6 +97,9 @@ pub async fn remove_tags_from_task(
         }
         TaskIssueProvider::Jira(jira_config, _) => {
             remove_labels_from_jira_issue(jira_config, &issue_id, tags).await?
+        }
+        TaskIssueProvider::GoogleTasks(google_config, tasklist) => {
+            remove_labels_from_google_task(tasklist, google_config, &issue_id, tags).await?
         }
     }
 
@@ -124,6 +134,9 @@ pub async fn add_tags_to_task(
         TaskIssueProvider::Jira(jira_config, _) => {
             add_labels_to_jira_issue(jira_config, &issue_id, tags).await?
         }
+        TaskIssueProvider::GoogleTasks(google_config, tasklist) => {
+            add_labels_to_google_task(tasklist, google_config, &issue_id, tags).await?
+        }
     }
 
     Ok(())
@@ -151,6 +164,9 @@ pub async fn close_task(app_config: &AppConfig, provider_and_issue: String) -> R
         }
         TaskIssueProvider::Jira(jira_config, project_config) => {
             close_issue_jira(jira_config, project_config, &issue_id).await?
+        }
+        TaskIssueProvider::GoogleTasks(google_config, tasklist) => {
+            close_task_google_tasks(google_config, tasklist, &issue_id).await?
         }
     }
 
@@ -191,6 +207,10 @@ pub async fn comment_task(
         TaskIssueProvider::Jira(jira_config, _) => {
             add_comment_to_jira_issue(jira_config, &issue_id, comment.as_str()).await?
         }
+        TaskIssueProvider::GoogleTasks(google_config, tasklist) => {
+            add_comment_to_google_task(tasklist, google_config, &issue_id, comment.as_str())
+                .await?
+        }
     }
 
     Ok(())
@@ -225,6 +245,9 @@ pub async fn view_task(app_config: &AppConfig, provider_and_issue: &str) -> Resu
         }
         TaskIssueProvider::Jira(jira_config, project_config) => {
             view_issue_jira(jira_config, project_config, issue_id).await
+        }
+        TaskIssueProvider::GoogleTasks(google_config, tasklist) => {
+            view_issue_google_task(google_config, tasklist, issue_id).await
         }
     }
 }

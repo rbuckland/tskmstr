@@ -134,7 +134,7 @@ enum IssueStoresCommand {
         /// The provider_id of a configured provider (see `issue-stores list-providers`)
         provider: String,
 
-        /// GitHub: <owner>/<repo>; GitLab: <group>/<project> or a numeric id; Jira: the project key
+        /// GitHub: <owner>/<repo>; GitLab: <group>/<project> or a numeric id; Jira: the project key; Google Tasks: tasklist id (or @default)
         target: String,
 
         /// Color used when displaying the store id (red, blue, "bright green", ...)
@@ -365,6 +365,34 @@ jira:
         defaults:
           for_new_tasks: false
         # filter: assignee = currentUser()
+
+# ---------------------------------------------------------------------------
+# Google Tasks configuration  (remove this section if not used)
+# ---------------------------------------------------------------------------
+# Store your Google OAuth refresh token in the OS keyring:
+#   macOS:  security add-generic-password -U -s google-tasks -a kermit@acme.com -w
+#   Linux:  secret-tool store --label='tskmstr google tasks' service google-tasks username kermit@acme.com
+#   Any:    keyring set google-tasks kermit@acme.com
+#
+# Create an OAuth client in Google Cloud with the Google Tasks API enabled, then
+# use its client id/secret below. The keyring password must be the refresh token.
+# Task tags are emulated from #tags stored in the task notes footer.
+# ---------------------------------------------------------------------------
+google_tasks:
+  - provider_id: google-tasks
+    credential:
+      service: google-tasks
+      username: kermit@acme.com
+    oauth2:
+      client_id: your-google-oauth-client-id
+      client_secret: your-google-oauth-client-secret
+    tasklists:
+      - id: GT
+        color: cyan
+        tasklist_id: "@default"
+        defaults:
+          for_new_tasks: false
+        # filter: maxResults=100
 "#;
 
     std::fs::write(config_path, template)?;

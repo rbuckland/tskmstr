@@ -2,6 +2,7 @@ use crate::config::{Colors, OutputOrdering};
 use crate::providers::github::methods::collect_tasks_from_github;
 
 use crate::providers::gitlab::methods::collect_tasks_from_gitlab;
+use crate::providers::google_tasks::methods::collect_tasks_from_google_tasks;
 
 use crate::providers::jira::methods::collect_tasks_from_jira;
 use crate::{
@@ -276,6 +277,9 @@ pub async fn collect_all_tasks(
     let jira_tasks = collect_tasks_from_jira(&config.jira, provider_id).await?;
     all_issues.extend(jira_tasks);
 
+    let google_tasks = collect_tasks_from_google_tasks(&config.google_tasks, provider_id).await?;
+    all_issues.extend(google_tasks);
+
     Ok(all_issues)
 }
 
@@ -393,6 +397,12 @@ pub async fn list_issue_stores(config: &AppConfig) -> Result<(), anyhow::Error> 
     for g in &config.jira {
         for x in &g.projects {
             println!("{} - {}/{}", x.id, g.endpoint, x.id);
+        }
+    }
+
+    for g in &config.google_tasks {
+        for x in &g.tasklists {
+            println!("{} - {}/{}", x.id, g.endpoint, x.tasklist_id);
         }
     }
 
