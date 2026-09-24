@@ -8,6 +8,7 @@ use reqwest::{
     Client,
 };
 use serde_json::json;
+use std::sync::OnceLock;
 
 use super::model::{GoogleTask, GoogleTaskList, GoogleTasksConfig, GoogleTasksListResponse};
 use crate::providers::common::{credentials::HasSecretToken, model::Comment};
@@ -20,7 +21,7 @@ fn construct_google_tasks_header(access_token: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert(
         AUTHORIZATION,
-        format!("{}{}", "Bearer ", access_token).parse().unwrap(),
+        ["Bearer ", access_token].concat().parse().unwrap(),
     );
     headers
 }
@@ -67,8 +68,9 @@ fn task_title(task: &GoogleTask) -> String {
         .unwrap_or_else(|| "(untitled task)".to_string())
 }
 
-fn tag_regex() -> Regex {
-    Regex::new(r"(?i)(?:^|[\s,])#([A-Za-z0-9][A-Za-z0-9._-]*)").unwrap()
+fn tag_regex() -> &'static Regex {
+    static TAG_REGEX: OnceLock<Regex> = OnceLock::new();
+    TAG_REGEX.get_or_init(|| Regex::new(r"(?i)(?:^|[\s,])#([A-Za-z0-9][A-Za-z0-9._-]*)").unwrap())
 }
 
 fn extract_tags(notes: Option<&str>) -> Vec<Label> {
