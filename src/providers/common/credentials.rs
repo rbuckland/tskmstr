@@ -17,15 +17,21 @@ pub trait HasSecretToken {
     }
 
     fn get_token(&self) -> String {
-        
-
         match self.credential() {
             Some(cke) => Entry::new(&cke.service, &cke.username)
-                .unwrap_or_else(|_| panic!("failed to get the keyring for {}/{}",
-                        &cke.service, &cke.username))
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "failed to get the keyring for {}/{}",
+                        &cke.service, &cke.username
+                    )
+                })
                 .get_password()
-                .unwrap_or_else(|_| panic!("failed to get the API token for {}/{}",
-                        &cke.service, &cke.username)),
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "failed to get the API token for {}/{}",
+                        &cke.service, &cke.username
+                    )
+                }),
             _ => panic!(
                 "Please provide a credentials in config for: {}",
                 self.task_provider_id()

@@ -1,7 +1,8 @@
-use std::collections::HashSet;
-use serde_inline_default::serde_inline_default;
 use colored::Color;
 use serde::Deserialize;
+use serde_inline_default::serde_inline_default;
+use std::collections::HashSet;
+use std::str::FromStr;
 
 use crate::providers::github::model::{GitHubConfig, GitHubRepository};
 use crate::providers::gitlab::model::{GitLabConfig, GitLabRepository};
@@ -16,6 +17,10 @@ pub struct AppConfig {
 
     pub labels: LabelConfig,
 
+    /// How `tskmstr list` (and the tray panel) orders and groups issues
+    #[serde_inline_default(OutputOrdering::default())]
+    pub output_ordering: OutputOrdering,
+
     #[serde_inline_default(Vec::<GitHubConfig>::new())]
     #[serde(rename = "github.com")]
     pub github_com: Vec<GitHubConfig>,
@@ -26,8 +31,46 @@ pub struct AppConfig {
 
     #[serde_inline_default(Vec::<JiraConfig>::new())]
     pub jira: Vec<JiraConfig>,
-
     // pub google_tasks: Vec<GoogleTaskConfig>,
+}
+
+/// Controls how the task list is grouped and ordered.
+///
+/// ```yaml
+/// output_ordering:
+///   grouped_by_tags: true       # one group per tag set (default) or one flat list
+///   ordered_by_provider: false  # within a group, keep issues of the same store together
+///   show_tag_heading: true      # print the "Tag: ..." heading above each tag group
+/// ```
+///
+/// Priority-labelled issues always come first, under their own heading.
+#[serde_inline_default]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+pub struct OutputOrdering {
+    /// Group the non-priority issues by their tag set (default). When false all
+    /// non-priority issues are shown as one list.
+    #[serde_inline_default(true)]
+    pub grouped_by_tags: bool,
+
+    /// Within each group, order issues by the issue store they come from, in
+    /// the order the stores appear in the config file (GitHub, GitLab, Jira).
+    #[serde_inline_default(false)]
+    pub ordered_by_provider: bool,
+
+    /// Print the "Tag: a, b" heading and divider above each tag group. The
+    /// priority heading is always shown.
+    #[serde_inline_default(true)]
+    pub show_tag_heading: bool,
+}
+
+impl Default for OutputOrdering {
+    fn default() -> Self {
+        OutputOrdering {
+            grouped_by_tags: true,
+            ordered_by_provider: false,
+            show_tag_heading: true,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -181,6 +224,7 @@ impl Default for AppConfig {
                 priority_labels: HashSet::new(),
                 priority_timeframe: None,
             },
+            output_ordering: OutputOrdering::default(),
             colors: Colors {
                 issue_id: "magenta".to_string(),
                 title: "blue".to_string(),
@@ -188,4 +232,308 @@ impl Default for AppConfig {
             },
         }
     }
+}
+
+/// Default configuration file location: `$HOME/.config/tskmstr/tskmstr.config.yml`
+/// (`%USERPROFILE%` is used when `HOME` is not set, as is usual on Windows).
+pub fn default_config_path() -> std::path::PathBuf {
+    let home = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .unwrap_or_else(|| panic!("neither HOME nor USERPROFILE environment variable is set"));
+    std::path::PathBuf::from(home).join(".config/tskmstr/tskmstr.config.yml")
+}
+
+/// Resolve the config path from an optional `--config` override.
+pub fn resolve_config_path(override_path: &Option<String>) -> std::path::PathBuf {
+    match override_path {
+        Some(x) => std::path::PathBuf::from(x),
+        None => default_config_path(),
+    }
+}
+
+/// Read and parse the YAML configuration file.
+pub fn load_config(path: &std::path::Path) -> Result<AppConfig, anyhow::Error> {
+    let contents = std::fs::read_to_string(path)
+        .map_err(|e| anyhow::anyhow!("Failed to open file {}: {}", path.display(), e))?;
+    let config: AppConfig = serde_yaml::from_str(&contents)
+        .map_err(|e| anyhow::anyhow!("Failed to load file {}: {}", path.display(), e))?;
+    Ok(config)
+}
+
+/// The kind of backend a configured provider talks to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProviderKind {
+    GitHub,
+    GitLab,
+    Jira,
+}
+
+impl ProviderKind {
+    /// The top-level YAML key that holds providers of this kind.
+    pub fn config_key(&self) -> &'static str {
+        match self {
+            ProviderKind::GitHub => "github.com",
+            ProviderKind::GitLab => "gitlab.com",
+            ProviderKind::Jira => "jira",
+        }
+    }
+
+    /// The YAML key, inside a provider entry, that holds its issue stores.
+    pub fn stores_key(&self) -> &'static str {
+        match self {
+            ProviderKind::GitHub | ProviderKind::GitLab => "repositories",
+            ProviderKind::Jira => "projects",
+        }
+    }
+
+    /// The `provider_id` a provider of this kind gets when none is configured
+    /// (mirrors the `serde_inline_default` values on the config structs).
+    pub fn default_provider_id(&self) -> &'static str {
+        match self {
+            ProviderKind::GitHub => "github.com",
+            ProviderKind::GitLab => "gitlab.com",
+            ProviderKind::Jira => "jira",
+        }
+    }
+}
+
+impl std::fmt::Display for ProviderKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ProviderKind::GitHub => write!(f, "github"),
+            ProviderKind::GitLab => write!(f, "gitlab"),
+            ProviderKind::Jira => write!(f, "jira"),
+        }
+    }
+}
+
+/// A configured provider (one keyring credential + endpoint) as shown by
+/// `tskmstr issue-stores list-providers`.
+#[derive(Debug, Clone)]
+pub struct ProviderSummary {
+    pub provider_id: String,
+    pub kind: ProviderKind,
+    pub endpoint: String,
+    /// Short IDs of the issue stores configured under this provider
+    pub store_ids: Vec<String>,
+}
+
+impl AppConfig {
+    /// All configured providers, in config file order (GitHub, GitLab, Jira).
+    pub fn providers(&self) -> Vec<ProviderSummary> {
+        let mut out = Vec::new();
+
+        for g in &self.github_com {
+            out.push(ProviderSummary {
+                provider_id: g.provider_id.clone(),
+                kind: ProviderKind::GitHub,
+                endpoint: g.endpoint.clone(),
+                store_ids: g.repositories.iter().map(|r| r.id.clone()).collect(),
+            });
+        }
+
+        for g in &self.gitlab_com {
+            out.push(ProviderSummary {
+                provider_id: g.provider_id.clone(),
+                kind: ProviderKind::GitLab,
+                endpoint: g.endpoint.clone(),
+                store_ids: g.repositories.iter().map(|r| r.id.clone()).collect(),
+            });
+        }
+
+        for j in &self.jira {
+            out.push(ProviderSummary {
+                provider_id: j.provider_id.clone(),
+                kind: ProviderKind::Jira,
+                endpoint: j.endpoint.clone(),
+                store_ids: j.projects.iter().map(|p| p.id.clone()).collect(),
+            });
+        }
+
+        out
+    }
+}
+
+/// Add a new issue store (repository / project) under an existing provider and
+/// write the updated config back to `path`.
+///
+/// * `provider_id` must match the `provider_id` of a configured provider
+///   (see `tskmstr issue-stores list-providers`).
+/// * `target` is `owner/repo` for GitHub, `group/project` (or a numeric project
+///   id) for GitLab, and the project key for Jira.
+/// * `color` must be a name `colored` understands (red, blue, bright green, ...).
+///
+/// The original file is copied to `<path>.bak` before it is rewritten. The
+/// rewrite is done via `serde_yaml::Value`, so YAML comments are not preserved.
+pub fn add_issue_store(
+    path: &std::path::Path,
+    config: &AppConfig,
+    shortcode: &str,
+    provider_id: &str,
+    target: &str,
+    color: &str,
+) -> Result<(), anyhow::Error> {
+    if shortcode.is_empty() || shortcode.contains('/') || shortcode.contains(char::is_whitespace) {
+        anyhow::bail!(
+            "Invalid shortcode '{}': it must be non-empty and contain no '/' or whitespace",
+            shortcode
+        );
+    }
+
+    if config.provider_ids().iter().any(|id| id == shortcode) {
+        anyhow::bail!(
+            "An issue store with the id '{}' already exists. Existing ids: {:?}",
+            shortcode,
+            config.provider_ids()
+        );
+    }
+
+    if Color::from_str(color).is_err() {
+        anyhow::bail!(
+            "Unknown color '{}'. Use one of: black, red, green, yellow, blue, magenta, cyan, white \
+             (optionally prefixed with 'bright ')",
+            color
+        );
+    }
+
+    let providers = config.providers();
+    let provider = providers
+        .iter()
+        .find(|p| p.provider_id == provider_id)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "No provider with id '{}' is configured. Known providers: {:?}\n\
+                 (run `tskmstr issue-stores list-providers`)",
+                provider_id,
+                providers
+                    .iter()
+                    .map(|p| p.provider_id.as_str())
+                    .collect::<Vec<_>>()
+            )
+        })?;
+
+    // Build the new store entry for this provider kind
+    let mut store = serde_yaml::Mapping::new();
+    store.insert("id".into(), shortcode.into());
+    store.insert("color".into(), color.into());
+    match provider.kind {
+        ProviderKind::GitHub => {
+            let (owner, repo) = target.split_once('/').ok_or_else(|| {
+                anyhow::anyhow!(
+                    "GitHub repositories must be given as <owner>/<repo>, got '{}'",
+                    target
+                )
+            })?;
+            if owner.is_empty() || repo.is_empty() || repo.contains('/') {
+                anyhow::bail!(
+                    "GitHub repositories must be given as <owner>/<repo>, got '{}'",
+                    target
+                );
+            }
+            store.insert("owner".into(), owner.into());
+            store.insert("repo".into(), repo.into());
+        }
+        ProviderKind::GitLab => {
+            // GitLab wants the namespaced path URL-encoded (group%2Fproject)
+            store.insert("project_id".into(), target.replace('/', "%2F").into());
+        }
+        ProviderKind::Jira => {
+            if target.contains('/') {
+                anyhow::bail!(
+                    "Jira projects must be given as the project key (e.g. PROJ), got '{}'",
+                    target
+                );
+            }
+            store.insert("project_key".into(), target.into());
+        }
+    }
+
+    // Load the raw YAML so that we keep every field we don't model
+    let contents = std::fs::read_to_string(path)
+        .map_err(|e| anyhow::anyhow!("Failed to open file {}: {}", path.display(), e))?;
+    let mut doc: serde_yaml::Value = serde_yaml::from_str(&contents)
+        .map_err(|e| anyhow::anyhow!("Failed to load file {}: {}", path.display(), e))?;
+
+    let kind = provider.kind;
+    let root = doc
+        .as_mapping_mut()
+        .ok_or_else(|| anyhow::anyhow!("Config file {} is not a YAML mapping", path.display()))?;
+    let entries = root
+        .get_mut(kind.config_key())
+        .and_then(|v| v.as_sequence_mut())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Config file has no '{}' list to add the provider to",
+                kind.config_key()
+            )
+        })?;
+
+    let entry = entries
+        .iter_mut()
+        .find(|e| {
+            let configured = e
+                .get("provider_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or_else(|| kind.default_provider_id());
+            configured == provider_id
+        })
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Could not find provider '{}' under '{}' in {}",
+                provider_id,
+                kind.config_key(),
+                path.display()
+            )
+        })?;
+
+    let entry_map = entry
+        .as_mapping_mut()
+        .ok_or_else(|| anyhow::anyhow!("Provider '{}' entry is not a YAML mapping", provider_id))?;
+    let stores_key: serde_yaml::Value = kind.stores_key().into();
+    let stores = entry_map
+        .entry(stores_key)
+        .or_insert_with(|| serde_yaml::Value::Sequence(Vec::new()));
+    let stores = stores.as_sequence_mut().ok_or_else(|| {
+        anyhow::anyhow!(
+            "'{}' of provider '{}' is not a YAML list",
+            kind.stores_key(),
+            provider_id
+        )
+    })?;
+    stores.push(serde_yaml::Value::Mapping(store));
+
+    // Make sure the result still parses as our config before touching the file
+    let serialized = serde_yaml::to_string(&doc)?;
+    let _: AppConfig = serde_yaml::from_str(&serialized)
+        .map_err(|e| anyhow::anyhow!("Updated config would be invalid, not saving: {}", e))?;
+
+    let backup = path.with_extension(
+        path.extension()
+            .map(|e| format!("{}.bak", e.to_string_lossy()))
+            .unwrap_or_else(|| "bak".to_string()),
+    );
+    std::fs::copy(path, &backup).map_err(|e| {
+        anyhow::anyhow!(
+            "Failed to back up {} to {}: {}",
+            path.display(),
+            backup.display(),
+            e
+        )
+    })?;
+    std::fs::write(path, serialized)
+        .map_err(|e| anyhow::anyhow!("Failed to write {}: {}", path.display(), e))?;
+
+    println!(
+        "Added issue store {} ({} {} via provider {}) to {}",
+        shortcode,
+        kind,
+        target,
+        provider_id,
+        path.display()
+    );
+    println!("Previous config backed up to {}", backup.display());
+    if contents.contains('#') {
+        println!("Note: YAML comments are not preserved when the config is rewritten.");
+    }
+    Ok(())
 }

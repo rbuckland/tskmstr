@@ -1,9 +1,10 @@
 use std::collections::HashSet;
 
 use crate::providers::common::credentials::HasSecretToken;
-use crate::providers::common::model::Issue;
-use crate::providers::gitlab::model::GitLabConfig;
-use crate::providers::gitlab::model::GitLabIssue;
+use crate::providers::common::model::{Comment, Issue, IssueDetail};
+use crate::providers::gitlab::model::{
+    GitLabAuthor, GitLabConfig, GitLabIssue, GitLabIssueDetail, GitLabNote,
+};
 
 use anyhow::{anyhow, Result};
 use serde_json::json;
@@ -69,7 +70,9 @@ pub async fn collect_tasks_from_gitlab(
         for (_idx, repo) in g
             .repositories
             .iter()
-            .filter(|&r| issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p))
+            .filter(|&r| {
+                issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p)
+            })
             .enumerate()
         {
             let optional_filter = repo
@@ -98,6 +101,7 @@ pub async fn collect_tasks_from_gitlab(
                 // Convert GitLab issues to the internal Issue representation
                 let issues = gitlab_issues.into_iter().map(|gitlab_issue| Issue {
                     id: format!("{}/{}", repo.id, gitlab_issue.iid),
+                    color: Some(repo.color.clone()),
                     title: gitlab_issue.title,
                     html_url: gitlab_issue.web_url,
                     tags: gitlab_issue
@@ -252,7 +256,6 @@ pub async fn remove_labels_from_gitlab_issue(
     }
 }
 
-
 pub async fn add_comment_to_gitlab_issue(
     gitlab_repo: &GitLabRepository,
     gitlab_config: &GitLabConfig,
@@ -280,8 +283,91 @@ pub async fn add_comment_to_gitlab_issue(
     if response.status().is_success() {
         println!("Comment added successfully.");
     } else {
-        eprintln!("Error: Unable to add a comment to the issue. Status: {:?}", response.status());
+        eprintln!(
+            "Error: Unable to add a comment to the issue. Status: {:?}",
+            response.status()
+        );
     }
 
     Ok(())
+}
+
+/// Fetch one issue with its (non-system) notes, for `tskmstr view`.
+pub async fn view_issue_gitlab(
+    gitlab_config: &GitLabConfig,
+    repo_config: &GitLabRepository,
+    issue_iid: &str,
+) -> Result<IssueDetail, anyhow::Error> {
+    let client = Client::new();
+    let base = format!(
+        "{}/api/v4/projects/{}/issues/{}",
+        gitlab_config.endpoint, repo_config.project_id, issue_iid
+    );
+    let token = gitlab_config.get_token();
+
+    let response = client
+        .get(&base)
+        .headers(construct_gitlab_header(&token))
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        anyhow::bail!(
+            "Unable to fetch issue {}/{} from GitLab (project {}). Status: {}",
+            repo_config.id,
+            issue_iid,
+            repo_config.project_id,
+            response.status()
+        );
+    }
+    let detail: GitLabIssueDetail = response.json().await?;
+
+    let response = client
+        .get(format!(
+            "{}/notes?sort=asc&order_by=created_at&per_page=100",
+            base
+        ))
+        .headers(construct_gitlab_header(&token))
+        .send()
+        .await?;
+    let notes: Vec<GitLabNote> = if response.status().is_success() {
+        response.json().await?
+    } else {
+        debug!(
+            "Unable to fetch notes for {}/{}: {}",
+            repo_config.id,
+            issue_iid,
+            response.status()
+        );
+        Vec::new()
+    };
+
+    let author_name = |a: Option<GitLabAuthor>| a.and_then(|a| a.name.or(a.username));
+
+    Ok(IssueDetail {
+        issue: Issue {
+            id: format!("{}/{}", repo_config.id, detail.iid),
+            color: Some(repo_config.color.clone()),
+            title: detail.title,
+            html_url: detail.web_url,
+            tags: detail
+                .labels
+                .into_iter()
+                .map(|l| Label { name: l.0 })
+                .collect(),
+        },
+        state: Some(detail.state),
+        body: detail.description.filter(|b| !b.trim().is_empty()),
+        author: author_name(detail.author),
+        created_at: detail.created_at,
+        updated_at: detail.updated_at,
+        comments: notes
+            .into_iter()
+            .filter(|n| !n.system)
+            .map(|n| Comment {
+                author: author_name(n.author),
+                created_at: n.created_at,
+                body: n.body.unwrap_or_default(),
+            })
+            .collect(),
+    })
 }

@@ -6,10 +6,10 @@ use serde_json::json;
 
 use base64::{engine::general_purpose, Engine as _};
 
-use super::model::{JiraConfig, JiraIssue, JiraProject};
+use super::model::{JiraConfig, JiraIssue, JiraIssueDetail, JiraProject, JiraUser};
 use crate::providers::{common::credentials::HasSecretToken, jira::model::JiraResult};
 use crate::providers::{
-    common::model::{Issue, Label},
+    common::model::{Comment, Issue, IssueDetail, Label},
     jira::model::JiraIssueType,
 };
 use log::debug;
@@ -33,7 +33,9 @@ pub async fn collect_tasks_from_jira(
         for (_idx, project) in j
             .projects
             .iter()
-            .filter(|&r| issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p))
+            .filter(|&r| {
+                issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p)
+            })
             .enumerate()
         {
             let optional_filter = project
@@ -69,8 +71,9 @@ pub async fn collect_tasks_from_jira(
                 // Convert Jira issues to the internal Issue representation
                 let issues = j_result.issues.into_iter().map(|jira_issue| Issue {
                     id: format!("{}/{}", project.id, jira_issue.id),
+                    color: Some(project.color.clone()),
                     title: jira_issue.fields.as_ref().unwrap().summary.clone(),
-                    html_url: jira_issue.url,
+                    html_url: format!("{}/browse/{}", j.endpoint, jira_issue.id),
                     tags: jira_issue
                         .fields
                         .unwrap()
@@ -360,7 +363,10 @@ pub async fn add_comment_to_jira_issue(
 
     let response = client
         .post(&url)
-        .headers(construct_jira_basic_auth_header(&jira_config.get_username(), &jira_config.get_token()))
+        .headers(construct_jira_basic_auth_header(
+            &jira_config.get_username(),
+            &jira_config.get_token(),
+        ))
         .json(&comment_json)
         .send()
         .await?;
@@ -368,8 +374,76 @@ pub async fn add_comment_to_jira_issue(
     if response.status().is_success() {
         println!("Comment added successfully.");
     } else {
-        eprintln!("Error: Unable to add a comment to the issue. Status: {:?}", response.status());
+        eprintln!(
+            "Error: Unable to add a comment to the issue. Status: {:?}",
+            response.status()
+        );
     }
 
     Ok(())
+}
+
+/// Fetch one issue with its comments, for `tskmstr view`.
+pub async fn view_issue_jira(
+    jira_config: &JiraConfig,
+    project_config: &JiraProject,
+    issue_key: &str,
+) -> Result<IssueDetail, anyhow::Error> {
+    let client = Client::new();
+    let url = format!(
+        "{}/rest/api/2/issue/{}?fields=summary,description,labels,status,reporter,created,updated,comment",
+        jira_config.endpoint, issue_key
+    );
+
+    let response = client
+        .get(&url)
+        .headers(construct_jira_basic_auth_header(
+            &jira_config.get_username(),
+            &jira_config.get_token(),
+        ))
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        anyhow::bail!(
+            "Unable to fetch issue {}/{} from Jira. Status: {}",
+            project_config.id,
+            issue_key,
+            response.status()
+        );
+    }
+    let detail: JiraIssueDetail = response.json().await?;
+    let f = detail.fields;
+
+    let user_name = |u: Option<JiraUser>| u.and_then(|u| u.display_name.or(u.email_address));
+
+    Ok(IssueDetail {
+        issue: Issue {
+            id: format!("{}/{}", project_config.id, detail.key),
+            color: Some(project_config.color.clone()),
+            title: f.summary,
+            html_url: format!("{}/browse/{}", jira_config.endpoint, detail.key),
+            tags: f
+                .labels
+                .unwrap_or_default()
+                .into_iter()
+                .map(|name| Label { name })
+                .collect(),
+        },
+        state: f.status.map(|s| s.name),
+        body: f.description.filter(|b| !b.trim().is_empty()),
+        author: user_name(f.reporter),
+        created_at: f.created,
+        updated_at: f.updated,
+        comments: f
+            .comment
+            .map(|page| page.comments)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|c| Comment {
+                author: user_name(c.author),
+                created_at: c.created,
+                body: c.body.unwrap_or_default(),
+            })
+            .collect(),
+    })
 }
