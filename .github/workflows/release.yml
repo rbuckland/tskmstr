@@ -183,6 +183,9 @@ jobs:
     container: rust:alpine
     env:
       VERSION: ${{ needs.version.outputs.version }}
+      # The musl target links statically by default, but Alpine only ships
+      # shared GTK/xdo libraries: link dynamically against musl instead.
+      RUSTFLAGS: -C target-feature=-crt-static
     steps:
       - uses: actions/checkout@v7
         with:
@@ -269,7 +272,9 @@ jobs:
       - name: Build
         run: cargo build --release --features tray
       - name: Install WiX
-        run: dotnet tool install --global wix
+        # Pinned to v5: the .wxs targets the v4/v5 schema, and WiX v7+ refuses
+        # to run without accepting the OSMF EULA.
+        run: dotnet tool install --global wix --version 5.0.2
       - name: Package
         shell: pwsh
         run: |
