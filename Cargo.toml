@@ -38,23 +38,23 @@ tray = [
 ]
 
 [dependencies]
-reqwest = { version  = "0.11",  features = [ "json", "multipart"] }
+reqwest = { version = "0.12", features = ["json", "multipart"] }
 serde = { version = "1.0" , features = [ "derive"] }
 serde_json = { version  = "1.0" }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.47", features = ["full"] }
 serde_yaml = "0.9"
-clap = { version = "4.4.6", features = [ "derive"] }
+clap = { version = "4.5", features = ["derive"] }
 shellexpand = "3.1.0"
 anyhow = "1.0.75"
 log = "0.4.20"
-simple_logger = "4.2.0"
+simple_logger = "5"
 regex = "1.9.4"
 lazy_static = "1.4.0"
 either = "1.9.0"
-colored = "2.0.4"
-keyring = "2.0.5"
+colored = "3"
+keyring = { version = "3", features = ["apple-native", "windows-native", "async-secret-service", "async-io", "crypto-rust"] }
 serde-inline-default = "0.1.1"
-base64 = "0.21.4"
+base64 = "0.22"
 
 # --- tray widget (optional, feature = "tray") ---------------------------------
 eframe = { version = "0.36", optional = true, default-features = false, features = ["default_fonts", "glow", "links", "wayland", "x11"] }
