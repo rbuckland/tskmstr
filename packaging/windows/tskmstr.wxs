@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  WiX v4/v5 source for the tskmstr installer (per-user, no admin required).
+
+  Installs:
+    %LOCALAPPDATA%\Programs\tskmstr\tskmstr.exe         (CLI)
+    %LOCALAPPDATA%\Programs\tskmstr\t.exe               (CLI, short alias)
+    %LOCALAPPDATA%\Programs\tskmstr\tskmstr-tray.exe    (tray widget)
+    %LOCALAPPDATA%\Programs\tskmstr\tskmstr.ico
+  and adds the folder to the user's PATH, a Start Menu shortcut, and a
+  HKCU Run entry so the tray widget starts at login (feature "Autostart").
+
+  Build (see .github/workflows/release.yml):
+    wix build packaging\windows\tskmstr.wxs -d Version=0.6.3 -d BinDir=target\release -d IcoFile=assets\tskmstr.ico -o tskmstr.msi
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="tskmstr"
+           Manufacturer="Ramon Buckland"
+           Version="$(var.Version)"
+           UpgradeCode="7d1a3c1e-6b7e-4c2a-9f1a-2b3c4d5e6f70"
+           Scope="perUser"
+           Language="1033"
+           InstallerVersion="500">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of tskmstr is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon" SourceFile="$(var.IcoFile)" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/rbuckland/tskmstr" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="tskmstr" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="StartupFolder" />
+
+    <Feature Id="Main" Title="tskmstr CLI and tray widget" Level="1" AllowAbsent="no">
+      <ComponentGroupRef Id="MainComponents" />
+    </Feature>
+    <Feature Id="Autostart" Title="Start the tray widget at login" Level="1">
+      <ComponentRef Id="AutostartRunKey" />
+    </Feature>
+
+    <ComponentGroup Id="MainComponents" Directory="INSTALLFOLDER">
+      <Component Id="CliExe" Guid="3f9d2b64-0a0e-4d6c-8a1f-1b2c3d4e5f60">
+        <File Id="TskmstrExe" Source="$(var.BinDir)\tskmstr.exe" KeyPath="yes" />
+        <RegistryValue Root="HKCU" Key="Software\tskmstr" Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" />
+      </Component>
+      <Component Id="CliAliasExe" Guid="4a0e3c75-1b1f-4e7d-9b20-2c3d4e5f6071">
+        <File Id="TExe" Source="$(var.BinDir)\tskmstr.exe" Name="t.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="TrayExe" Guid="5b1f4d86-2c20-4f8e-ac31-3d4e5f607182">
+        <File Id="TrayExeFile" Source="$(var.BinDir)\tskmstr-tray.exe" KeyPath="yes">
+          <Shortcut Id="StartMenuShortcut"
+                    Directory="ProgramMenuFolder"
+                    Name="tskmstr tray"
+                    Description="Open tasks from GitHub, GitLab and Jira in your tray"
+                    WorkingDirectory="INSTALLFOLDER"
+                    Icon="AppIcon"
+                    Advertise="no" />
+        </File>
+        <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\tskmstr" Name="TrayInstalled" Type="integer" Value="1" KeyPath="no" />
+      </Component>
+      <Component Id="IconFile" Guid="6c2a5e97-3d31-4a9f-bd42-4e5f60718293">
+        <File Id="IcoFile" Source="$(var.IcoFile)" Name="tskmstr.ico" KeyPath="yes" />
+      </Component>
+      <Component Id="UserPath" Guid="7d3b6fa8-4e42-4ba0-ce53-5f6071829304">
+        <RegistryValue Root="HKCU" Key="Software\tskmstr" Name="PathAdded" Type="integer" Value="1" KeyPath="yes" />
+        <Environment Id="UserPathEnv" Name="PATH" Value="[INSTALLFOLDER]" Part="last" Action="set" System="no" Permanent="no" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Starts the tray widget when the user logs in. Removed on uninstall.
+         `tskmstr-tray autostart disable` removes the same value. -->
+    <Component Id="AutostartRunKey" Directory="INSTALLFOLDER" Guid="8e4c70b9-5f53-4cb1-df64-607182930415">
+      <RegistryValue Root="HKCU"
+                     Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                     Name="tskmstr-tray"
+                     Type="string"
+                     Value="&quot;[INSTALLFOLDER]tskmstr-tray.exe&quot;"
+                     KeyPath="yes" />
+    </Component>
+  </Package>
+</Wix>
