@@ -32,7 +32,7 @@
   - [Tray Widget](#tray-widget)
     - [Starting the tray widget at login](#starting-the-tray-widget-at-login)
     - [Building the widget from source](#building-the-widget-from-source)
-    - [Packaging](#packaging)
+    - [Releases and packaging](#releases-and-packaging)
   - [Command Reference](#command-reference)
   - [Features](#features)
   - [Building](#building)
@@ -630,9 +630,16 @@ because AppIndicator icons do not report clicks, use the *Show tasks* menu item 
 the panel. On macOS the first refresh may ask you to allow `tskmstr-tray` to read the
 API token from your keychain.
 
-### Packaging
+### Releases and packaging
 
-`packaging/` holds everything the release pipeline uses, runnable locally:
+Releases are automatic. Every push to `main` is versioned from its
+[conventional commits](https://www.conventionalcommits.org/) with [convco](https://convco.github.io):
+`feat:` bumps the minor version, `fix:` the patch, and a `!` / `BREAKING CHANGE` footer the major;
+`docs:`/`chore:`/`ci:` commits do not release. The pipeline commits the version bump, tags
+`vX.Y.Z`, builds every package listed under [Installation](#installation) and publishes the GitHub
+release that the quick-install scripts look up.
+
+`packaging/` holds everything the pipeline uses, runnable locally:
 
 ```sh
 cargo build --release --features tray

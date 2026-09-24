@@ -1,56 +1,127 @@
-# Release pipeline: on a `v*` tag, build the CLI (`tskmstr`) and the tray
-# widget (`tskmstr-tray`) and publish installable packages for every platform:
+# Release pipeline.
 #
-#   macOS    tskmstr-<v>-macos-universal.dmg        (.app + CLI, universal binaries)
-#   Linux    tskmstr_<v>_amd64.deb                  (Debian/Ubuntu)
-#            tskmstr_<v>_x86_64.apk                 (Alpine, musl build)
-#            tskmstr-<v>-linux-amd64.tar.gz
-#            tskmstr-<v>-linux-arm64-cli.tar.gz     (CLI only, cross-compiled)
-#   Windows  tskmstr-<v>-windows-x64.msi            (per-user installer)
-#            tskmstr-<v>-windows-x64.zip
-#   SHA256SUMS
+# Versions are computed from conventional commits with convco (plain semver:
+# feat -> minor, fix -> patch, `!`/BREAKING CHANGE -> major). On every push to
+# `main` that contains a releasable commit, this workflow:
+#   1. bumps Cargo.toml/Cargo.lock, commits `chore(release): vX.Y.Z` and tags it
+#   2. builds the CLI (`tskmstr`) and the tray widget (`tskmstr-tray`) and
+#      publishes installable packages for every platform:
+#        macOS    tskmstr-<v>-macos-universal.dmg        (.app + CLI, universal binaries)
+#        Linux    tskmstr_<v>_amd64.deb                  (Debian/Ubuntu)
+#                 tskmstr_<v>_x86_64.apk                 (Alpine, musl build)
+#                 tskmstr-<v>-linux-amd64.tar.gz
+#                 tskmstr-<v>-linux-arm64-cli.tar.gz     (CLI only, cross-compiled)
+#        Windows  tskmstr-<v>-windows-x64.msi            (per-user installer)
+#                 tskmstr-<v>-windows-x64.zip
+#        SHA256SUMS
+#   3. creates the GitHub release that install.sh / install.ps1 look up.
 #
-# The packaging logic lives in packaging/ so it can be run locally; this file
-# only wires it up.
+# Docs/chore/ci-only pushes produce no release. A manually pushed `v*` tag or a
+# workflow_dispatch (optionally with an explicit version) also releases.
+# If branch protection stops the bot pushing the bump commit to main, the tag
+# still points at a bump commit on top of main and the release proceeds; set a
+# `RELEASE_TOKEN` secret (PAT with contents:write) to let it push to main.
+#
+# Packaging logic lives in packaging/ so it can be run locally.
 name: release
 
 on:
   push:
-    tags:
-      - v*
+    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (x.y.z). Leave empty to compute it from conventional commits.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
   NFPM_VERSION: 2.47.0
+  CONVCO_VERSION: 0.7.2
 
 jobs:
   version:
     name: version
     runs-on: ubuntu-latest
+    # the bump commit itself must not start another release
+    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release)') }}
     outputs:
       version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+      release: ${{ steps.v.outputs.release }}
     steps:
       - uses: actions/checkout@v4
-      - id: v
-        run: echo "version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
-      - name: Tag must match Cargo.toml version
-        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install convco
         run: |
-          test "v${{ steps.v.outputs.version }}" = "${GITHUB_REF_NAME}" \
-            || { echo "tag ${GITHUB_REF_NAME} != Cargo.toml v${{ steps.v.outputs.version }}"; exit 1; }
+          curl -fsSL "https://github.com/convco/convco/releases/download/v${CONVCO_VERSION}/convco-v${CONVCO_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+            | sudo tar -xz --strip-components=1 -C /usr/local/bin "convco-v${CONVCO_VERSION}-x86_64-unknown-linux-musl/convco"
+          convco --version
+      - name: Determine version
+        id: v
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          MODE=bump
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"; MODE=tag
+          elif [[ -n "$INPUT_VERSION" ]]; then
+            VERSION="${INPUT_VERSION#v}"
+          else
+            CURRENT="$(convco version)"
+            VERSION="$(convco version --bump --treat-major-zero-as-stable)"
+            if [[ "$VERSION" == "$CURRENT" ]]; then
+              echo "No releasable commits since v$CURRENT - nothing to do."
+              echo "release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "Releasing v$VERSION ($MODE)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION"    >> "$GITHUB_OUTPUT"
+          echo "release=true"     >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE"       >> "$GITHUB_OUTPUT"
+      - name: Bump version, commit and tag
+        if: steps.v.outputs.release == 'true' && steps.v.outputs.mode == 'bump'
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          packaging/set-version.sh "$VERSION"
+          git add Cargo.toml Cargo.lock
+          git commit -m "chore(release): v$VERSION [skip ci]"
+          git tag -a "v$VERSION" -m "tskmstr v$VERSION"
+          if ! git push origin HEAD:main; then
+            echo "::warning::Could not push the version bump to main (branch protection?). Releasing from the tag anyway; set a RELEASE_TOKEN secret to fix this."
+          fi
+          git push origin "v$VERSION"
 
   linux:
     name: linux amd64 (deb, tgz)
     needs: version
+    if: needs.version.outputs.release == 'true'
     runs-on: ubuntu-22.04
     env:
       VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.tag }}
       - uses: dtolnay/rust-toolchain@stable
       - name: Install GTK / AppIndicator development libraries
         run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libxdo-dev libayatana-appindicator3-dev
@@ -58,10 +129,12 @@ jobs:
         run: |
           curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" \
             | sudo tar -xz -C /usr/local/bin nfpm
+      - name: Set version
+        run: packaging/set-version.sh "$VERSION"
       - name: Test
-        run: cargo test --release --locked --features tray
+        run: cargo test --release --features tray
       - name: Build
-        run: cargo build --release --locked --features tray
+        run: cargo build --release --features tray
       - name: Package
         run: |
           ./target/release/tskmstr-tray render-icon --out-dir "$PWD/assets"
@@ -74,15 +147,20 @@ jobs:
   linux-arm64-cli:
     name: linux arm64 (CLI only, tgz)
     needs: version
+    if: needs.version.outputs.release == 'true'
     runs-on: ubuntu-22.04
     env:
       VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.tag }}
       - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/install-action@cross
+      - name: Set version
+        run: packaging/set-version.sh "$VERSION"
       - name: Build (cross)
-        run: cross build --release --locked --target aarch64-unknown-linux-gnu --bin tskmstr
+        run: cross build --release --target aarch64-unknown-linux-gnu --bin tskmstr
       - name: Package
         run: |
           PKG="tskmstr-${VERSION}-linux-arm64-cli"
@@ -97,6 +175,7 @@ jobs:
   alpine:
     name: alpine x86_64 (apk)
     needs: version
+    if: needs.version.outputs.release == 'true'
     runs-on: ubuntu-latest
     # musl build of the GUI stack is the least battle-tested target: do not
     # block the release on it.
@@ -106,6 +185,8 @@ jobs:
       VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.tag }}
       - name: Install build dependencies
         run: |
           apk add --no-cache bash build-base musl-dev pkgconf curl tar git \
@@ -114,8 +195,10 @@ jobs:
         run: |
           curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" \
             | tar -xz -C /usr/local/bin nfpm
+      - name: Set version
+        run: packaging/set-version.sh "$VERSION"
       - name: Build
-        run: cargo build --release --locked --features tray
+        run: cargo build --release --features tray
       - name: Package
         run: |
           ./target/release/tskmstr-tray render-icon --out-dir "$PWD/assets"
@@ -128,20 +211,25 @@ jobs:
   macos:
     name: macos universal (dmg)
     needs: version
+    if: needs.version.outputs.release == 'true'
     runs-on: macos-latest
     env:
       VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.tag }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin, x86_64-apple-darwin
+      - name: Set version
+        run: packaging/set-version.sh "$VERSION"
       - name: Test
-        run: cargo test --release --locked --features tray
+        run: cargo test --release --features tray
       - name: Build (arm64 + x86_64)
         run: |
-          cargo build --release --locked --features tray --target aarch64-apple-darwin
-          cargo build --release --locked --features tray --target x86_64-apple-darwin
+          cargo build --release --features tray --target aarch64-apple-darwin
+          cargo build --release --features tray --target x86_64-apple-darwin
       - name: Universal binaries
         run: |
           mkdir -p bin
@@ -164,16 +252,22 @@ jobs:
   windows:
     name: windows x64 (msi, zip)
     needs: version
+    if: needs.version.outputs.release == 'true'
     runs-on: windows-latest
     env:
       VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.tag }}
       - uses: dtolnay/rust-toolchain@stable
+      - name: Set version
+        shell: bash
+        run: packaging/set-version.sh "$VERSION"
       - name: Test
-        run: cargo test --release --locked --features tray
+        run: cargo test --release --features tray
       - name: Build
-        run: cargo build --release --locked --features tray
+        run: cargo build --release --features tray
       - name: Install WiX
         run: dotnet tool install --global wix
       - name: Package
@@ -196,7 +290,7 @@ jobs:
   release:
     name: publish GitHub release
     needs: [version, linux, linux-arm64-cli, alpine, macos, windows]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: needs.version.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -208,5 +302,8 @@ jobs:
           cd dist && ls -la && sha256sum * > SHA256SUMS && cat SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: ${{ needs.version.outputs.tag }}
           files: dist/*
           generate_release_notes: true
+          make_latest: true
