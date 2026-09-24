@@ -8,6 +8,35 @@ edition = "2021"
 [profile.release]
 strip="debuginfo"
 
+[lib]
+name = "tskmstr"
+path = "src/lib.rs"
+
+[[bin]]
+name = "tskmstr"
+path = "src/main.rs"
+
+# Desktop tray/menu-bar widget. Build with: cargo build --features tray
+[[bin]]
+name = "tskmstr-tray"
+path = "src/bin/tray/main.rs"
+required-features = ["tray"]
+
+[features]
+default = []
+tray = [
+    "dep:eframe",
+    "dep:winit",
+    "dep:tray-icon",
+    "dep:tiny-skia",
+    "dep:ab_glyph",
+    "dep:epaint_default_fonts",
+    "dep:gtk",
+    "dep:objc2",
+    "dep:objc2-app-kit",
+    "dep:objc2-foundation",
+]
+
 [dependencies]
 reqwest = { version  = "0.11",  features = [ "json", "multipart"] }
 serde = { version = "1.0" , features = [ "derive"] }
@@ -26,3 +55,20 @@ colored = "2.0.4"
 keyring = "2.0.5"
 serde-inline-default = "0.1.1"
 base64 = "0.21.4"
+
+# --- tray widget (optional, feature = "tray") ---------------------------------
+eframe = { version = "0.36", optional = true, default-features = false, features = ["default_fonts", "glow", "links", "wayland", "x11"] }
+winit = { version = "0.30", optional = true, default-features = false }
+tray-icon = { version = "0.25", optional = true }
+tiny-skia = { version = "0.12", optional = true }
+ab_glyph = { version = "0.2", optional = true }
+epaint_default_fonts = { version = "0.36", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = { version = "0.18", optional = true }
+
+# macOS: NSScreen lookup so the panel lands under the icon on mixed-DPI multi-monitor setups
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", optional = true }
+objc2-app-kit = { version = "0.3", optional = true, default-features = false, features = ["std", "NSScreen"] }
+objc2-foundation = { version = "0.3", optional = true, default-features = false, features = ["std", "NSArray", "NSGeometry"] }
