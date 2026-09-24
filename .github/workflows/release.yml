@@ -283,6 +283,8 @@ jobs:
           wix build packaging\windows\tskmstr.wxs `
             -d "Version=$env:VERSION" -d "BinDir=target\release" -d "IcoFile=assets\tskmstr.ico" `
             -o "dist\tskmstr-$env:VERSION-windows-x64.msi"
+          # wix writes a .wixpdb debug file beside the MSI; keep it out of the release
+          Remove-Item dist\*.wixpdb -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force stage | Out-Null
           Copy-Item target\release\tskmstr.exe, target\release\tskmstr-tray.exe, assets\tskmstr.ico, README.md, LICENSE stage\
           Copy-Item target\release\tskmstr.exe stage\t.exe
