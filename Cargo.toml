@@ -57,7 +57,7 @@ serde-inline-default = "1.0.2"
 base64 = "0.23"
 
 # --- tray widget (optional, feature = "tray") ---------------------------------
-eframe = { version = "0.36", optional = true, default-features = false, features = ["default_fonts", "glow", "links", "wayland", "x11"] }
+eframe = { version = "0.36", optional = true, default-features = false, features = ["default_fonts", "wgpu", "links", "wayland", "x11"] }
 winit = { version = "0.30", optional = true, default-features = false }
 tray-icon = { version = "0.25", optional = true }
 tiny-skia = { version = "0.12", optional = true }
