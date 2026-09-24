@@ -27,7 +27,7 @@ pub fn run(out_dir: &Path) -> Result<()> {
         ico(&pngs, &[16, 32, 48, 64, 128, 256]),
     )?;
 
-    for (name, layout) in [("wide", Layout::Wide), ("square", Layout::Square)] {
+    for (name, layout) in [("menubar", Layout::MenuBar), ("square", Layout::Square)] {
         for n in [0usize, 7, 43] {
             let png = render_pixmap(n, layout, 64).encode_png()?;
             std::fs::write(out_dir.join(format!("tray-{name}-{n}.png")), png)?;
