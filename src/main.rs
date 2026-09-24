@@ -126,9 +126,9 @@ enum IssueStoresCommand {
 
     /// Add a new issue/task store to an existing provider in the config file
     ///
-    /// Example: tskmstr issue-stores add SPG github/kermitfrog_acme acme/anvils blue
+    /// Example: tskmstr issue-stores add ANV github/kermitfrog_acme acme/anvils blue
     Add {
-        /// Short, unique id for the store (used as the issue id prefix, e.g. SPG/12)
+        /// Short, unique id for the store (used as the issue id prefix, e.g. ANV/12)
         shortcode: String,
 
         /// The provider_id of a configured provider (see `issue-stores list-providers`)
@@ -309,15 +309,15 @@ output_ordering:
 #   Any:    keyring set github.com <username>
 # ---------------------------------------------------------------------------
 github.com:
-  - provider_id: github/myusername
+  - provider_id: github/kermitfrog_acme
     credential:
       service: github.com
-      username: myusername
+      username: kermitfrog_acme
     repositories:
       - id: G
         color: blue
-        owner: my-org
-        repo: my-repo
+        owner: acme
+        repo: widgets
         defaults:
           for_new_tasks: true
         # filter: labels=my-label
@@ -331,14 +331,14 @@ github.com:
 #   Any:    keyring set gitlab.com <username>
 # ---------------------------------------------------------------------------
 gitlab.com:
-  - provider_id: gitlab/myusername
+  - provider_id: gitlab/kermitfrog_acme
     credential:
       service: gitlab.com
-      username: myusername
+      username: kermitfrog_acme
     repositories:
       - id: L
         color: green
-        project_id: myorg%2Fmy-project
+        project_id: acme%2Frockets%2Flauncher
         defaults:
           for_new_tasks: false
 
@@ -346,16 +346,16 @@ gitlab.com:
 # Jira configuration  (remove this section if not used)
 # ---------------------------------------------------------------------------
 # Store your API token in the OS keyring (username must be your Jira login email):
-#   macOS:  security add-generic-password -U -s yourinstance.atlassian.net -a user@example.com -w
-#   Linux:  secret-tool store --label='tskmstr jira' service yourinstance.atlassian.net username user@example.com
-#   Any:    keyring set yourinstance.atlassian.net user@example.com
+#   macOS:  security add-generic-password -U -s acme.atlassian.net -a kermit@acme.com -w
+#   Linux:  secret-tool store --label='tskmstr jira' service acme.atlassian.net username kermit@acme.com
+#   Any:    keyring set acme.atlassian.net kermit@acme.com
 # ---------------------------------------------------------------------------
 jira:
-  - provider_id: My Jira
-    endpoint: https://yourinstance.atlassian.net
+  - provider_id: Acme Jira
+    endpoint: https://acme.atlassian.net
     credential:
-      service: yourinstance.atlassian.net
-      username: user@example.com
+      service: acme.atlassian.net
+      username: kermit@acme.com
     projects:
       - id: J
         color: yellow

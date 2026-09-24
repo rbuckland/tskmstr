@@ -176,41 +176,41 @@ The config file lives at `~/.config/tskmstr/tskmstr.config.yml` on all platforms
       show_tag_heading: true
 
     github.com:
-      - provider_id: Stuff On GitHub
+      - provider_id: github/kermitfrog_acme
         credential:
           service: github.com
-          username: key_username_in_keyring
+          username: kermitfrog_acme
         repositories:
           - id: 🅆
             color: blue
-            owner: yourgithub_org
-            repo: github_repo
+            owner: acme
+            repo: widgets
             defaults:
               for_new_tasks: true
             filter: labels=bugs    
           - id: 🄿
             color: blue
-            owner: other_github_org
-            repo: github_repo2
+            owner: kermitfrog_acme
+            repo: tasks
 
 
     gitlab.com:
-      - provider_id: work-repos
+      - provider_id: gitlab/kermitfrog_acme
         credential:
           service: gitlab.com
-          username: key_username_in_keyring
+          username: kermitfrog_acme
         repositories:
           - id: Ⓐ
             color: blue
-            project_id: group%2Fsubgroup%2Frepo
+            project_id: acme%2Frockets%2Flauncher
             filter: labels=phase::selected         
 
     jira:
-      - provider_id: Jira on SaaS
-        endpoint: https://yourjira-instance.atlassian.net
+      - provider_id: Acme Jira
+        endpoint: https://acme.atlassian.net
         credential:
-          service: yourjira-instance.atlassian.net
-          username: user@email.com # this and the password are used for the auth, so make it correct
+          service: acme.atlassian.net
+          username: kermit@acme.com # this and the password are used for the auth, so make it correct
 
         projects:
           - id: J # tskmstr short_code
@@ -238,7 +238,7 @@ values you put in the config.
 ```sh
 security add-generic-password -U -s github.com -a <username> -w
 security add-generic-password -U -s gitlab.com -a <username> -w
-security add-generic-password -U -s <your-jira-instance>.atlassian.net -a user@example.com -w
+security add-generic-password -U -s <your-jira-instance>.atlassian.net -a kermit@acme.com -w
 ```
 
 With `-w` and no value, `security` prompts for the token so it stays out of your shell
@@ -249,7 +249,7 @@ history. `-U` updates the entry if it already exists.
 ```sh
 secret-tool store --label='tskmstr github' service github.com username <username>
 secret-tool store --label='tskmstr gitlab' service gitlab.com username <username>
-secret-tool store --label='tskmstr jira' service <your-jira-instance>.atlassian.net username user@example.com
+secret-tool store --label='tskmstr jira' service <your-jira-instance>.atlassian.net username kermit@acme.com
 ```
 
 **Any platform** (Python `keyring` CLI, on Ubuntu from `python3-keyring`):
@@ -257,7 +257,7 @@ secret-tool store --label='tskmstr jira' service <your-jira-instance>.atlassian.
 ```sh
 keyring set github.com <username>
 keyring set gitlab.com <username>
-keyring set <your-jira-instance>.atlassian.net user@example.com
+keyring set <your-jira-instance>.atlassian.net kermit@acme.com
 ```
 
 For GitHub and GitLab, `<username>` is just the lookup key for the keyring entry and
@@ -362,6 +362,7 @@ Each of the "repositories" has a unique ID which comes from the config file `<gl
     credential:
       service: github.com
       username: kermitthefrog
+    repositories:
     - id: ME
       color: grey
       owner: kermitthefrog
@@ -462,11 +463,11 @@ timestamps, the description, and the comments in chronological order.
 ```
 > tskmstr view P/78
 P/78 Libraries and software topics to learn
-https://github.com/rbuckland/tskmstr-tasks/issues/78
+https://github.com/kermitthefrog/tasks-for-personal/issues/78
 
 State:   open
 Labels:  software
-Author:  rbuckland
+Author:  kermitthefrog
 Created: 2023-10-22T22:08:56Z
 Updated: 2023-10-22T22:13:09Z
 
@@ -476,7 +477,7 @@ Python
 
 Comments (1)
 ----------------------------------------
-[rbuckland @ 2023-11-02T09:14:00Z]
+[kermitthefrog @ 2023-11-02T09:14:00Z]
 Also look at seaborn
 
 > tskmstr view P/78 J/PROJ-12     # several at once, separated by a rule
@@ -489,9 +490,9 @@ are shown as the plain text / wiki markup the v2 REST API returns.
 
 ```
 > tskmstr issue-stores
-T - https://api.github.com/uation ser/repos
-🄿 - https://api.github.com/user/tskmstr-tasks
-🅆 - https://gitlab.com/username%2Fsome-sub-repo
+T - https://api.github.com/acme/widgets
+🄿 - https://api.github.com/kermitthefrog/tasks-for-personal
+🅆 - https://gitlab.com/acme%2Frockets%2Flauncher
 ```
 
 Use this to determine the `-i <id>` you need to use for `tskmstr add -i <id> <tile> <details> [<tag>...]`
@@ -505,9 +506,9 @@ First find the `provider_id` to add the store under:
 
 ```
 > tskmstr issue-stores list-providers
-github/kermitfrog_acme  github  https://api.github.com  [T, 🄿]
-gitlab/rbuckland       gitlab  https://gitlab.com      [🅆]
-My Jira                jira    https://acme.atlassian.net  [J]
+github/kermitfrog_acme  github  https://api.github.com    [T, 🄿]
+gitlab/kermitfrog_acme  gitlab  https://gitlab.com        [🅆]
+Acme Jira               jira    https://acme.atlassian.net [J]
 ```
 
 Then add the store, giving it a short unique id (the prefix used in issue ids), the
@@ -517,13 +518,13 @@ provider, the repository/project and optionally a color (default `white`):
 tskmstr issue-stores add <shortcode> <provider_id> <target> [<color>]
 
 # GitHub: <owner>/<repo>
-tskmstr issue-stores add SPG github/kermitfrog_acme acme/anvils blue
+tskmstr issue-stores add ANV github/kermitfrog_acme acme/anvils blue
 
 # GitLab: <group>/<project> (URL-encoded for you) or a numeric project id
-tskmstr issue-stores add W2 gitlab/rbuckland mygroup/sub/project green
+tskmstr issue-stores add W2 gitlab/kermitfrog_acme acme/rockets/launcher green
 
 # Jira: the project key
-tskmstr issue-stores add OPS "My Jira" OPS "bright yellow"
+tskmstr issue-stores add OPS "Acme Jira" OPS "bright yellow"
 ```
 
 The config file is rewritten in place and the previous version is kept as
