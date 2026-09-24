@@ -36,6 +36,7 @@ fn build_tray(count: usize) -> Result<tray_icon::TrayIcon> {
     Ok(TrayIconBuilder::new()
         .with_id("tskmstr")
         .with_icon(icon::render(count, icon::platform_layout()))
+        .with_icon_as_template(icon::platform_layout().is_template())
         .with_menu(Box::new(build_menu()?))
         .with_menu_on_left_click(false)
         .with_tooltip(tooltip(count))
@@ -57,9 +58,10 @@ impl TrayHost {
     }
 
     pub fn set_count(&self, count: usize) {
+        let layout = icon::platform_layout();
         let _ = self
             .tray
-            .set_icon(Some(icon::render(count, icon::platform_layout())));
+            .set_icon_with_as_template(Some(icon::render(count, layout)), layout.is_template());
         let _ = self.tray.set_tooltip(Some(tooltip(count)));
     }
 
