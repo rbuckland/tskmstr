@@ -294,11 +294,11 @@ labels:
     - todo
 
 # How `tskmstr list` lays out the issues (all optional, defaults shown).
-# Priority-labelled issues are always listed first under their own heading.
+# Priority-labelled issues are listed first under their own heading (when there
+# are any). Each group is ordered by store (config order), then newest first.
 output_ordering:
   grouped_by_tags: true       # false = one flat list after the priority group
-  ordered_by_provider: false  # true = keep issues from the same store together
-  show_tag_heading: true      # false = no "Tag: ..." heading above each group
+  show_tag_heading: true      # false = no "Tag: ..." headings; one flat list
 
 # ---------------------------------------------------------------------------
 # GitHub configuration  (remove this section if not used)

@@ -39,26 +39,24 @@ pub struct AppConfig {
 /// ```yaml
 /// output_ordering:
 ///   grouped_by_tags: true       # one group per tag set (default) or one flat list
-///   ordered_by_provider: false  # within a group, keep issues of the same store together
 ///   show_tag_heading: true      # print the "Tag: ..." heading above each tag group
 /// ```
 ///
-/// Priority-labelled issues always come first, under their own heading.
+/// Priority-labelled issues come first, under their own heading, when there
+/// are any. Within every group issues are ordered by store (config order),
+/// then newest first.
 #[serde_inline_default]
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub struct OutputOrdering {
-    /// Group the non-priority issues by their tag set (default). When false all
-    /// non-priority issues are shown as one list.
+    /// Group the non-priority issues by their tag set (default). When false,
+    /// or when `show_tag_heading` is false, all non-priority issues are shown
+    /// as one list.
     #[serde_inline_default(true)]
     pub grouped_by_tags: bool,
 
-    /// Within each group, order issues by the issue store they come from, in
-    /// the order the stores appear in the config file (GitHub, GitLab, Jira).
-    #[serde_inline_default(false)]
-    pub ordered_by_provider: bool,
-
-    /// Print the "Tag: a, b" heading and divider above each tag group. The
-    /// priority heading is always shown.
+    /// Print the "Tag: a, b" heading and divider above each tag group. When
+    /// false the tag groups are merged into one list, separated from the
+    /// priority group by a divider line.
     #[serde_inline_default(true)]
     pub show_tag_heading: bool,
 }
@@ -67,7 +65,6 @@ impl Default for OutputOrdering {
     fn default() -> Self {
         OutputOrdering {
             grouped_by_tags: true,
-            ordered_by_provider: false,
             show_tag_heading: true,
         }
     }

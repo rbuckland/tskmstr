@@ -520,6 +520,9 @@ impl eframe::App for TrayApp {
                 .show(ui, |ui| {
                     for group in &self.groups {
                         ui.add_space(6.0);
+                        if group.separator_before {
+                            ui.separator();
+                        }
                         if group.show_heading {
                             ui.label(
                                 RichText::new(&group.heading)

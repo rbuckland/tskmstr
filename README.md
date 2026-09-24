@@ -172,7 +172,6 @@ The config file lives at `~/.config/tskmstr/tskmstr.config.yml` on all platforms
     # optional, defaults shown
     output_ordering:
       grouped_by_tags: true
-      ordered_by_provider: false
       show_tag_heading: true
 
     github.com:
@@ -533,31 +532,42 @@ The config file is rewritten in place and the previous version is kept as
 
 ### Output Ordering
 
-By default `tskmstr list` shows the priority-labelled issues first, then one group per
-distinct set of tags, each under a `Tag: ...` heading. The optional `output_ordering`
+By default `tskmstr list` shows the priority-labelled issues first (the `Priority:`
+heading only appears when at least one issue carries a priority label), then one group
+per distinct set of tags, each under a `Tag: ...` heading. The optional `output_ordering`
 section changes that layout (the tray widget follows the same settings):
 
 ```yaml
 output_ordering:
   grouped_by_tags: true       # default
-  ordered_by_provider: false  # default
   show_tag_heading: true      # default
 ```
 
 | Setting | `true` | `false` |
 |---------|--------|---------|
 | `grouped_by_tags` | One group per tag set, sorted by name | One flat list of all non-priority issues |
-| `ordered_by_provider` | Within each group, issues are kept together by issue store, in config-file order (GitHub, then GitLab, then Jira) | Issues stay in the order the providers returned them |
-| `show_tag_heading` | `Tag: a, b` heading and divider above each group | Headings and dividers omitted; the tags are still shown after each title |
+| `show_tag_heading` | `Tag: a, b` heading and divider above each group | No tag headings: all non-priority issues form one list, separated from the priority group by a divider line; the tags are still shown after each title |
 
-The `Priority:` heading is always shown. For example, a compact single list with issues
-clustered by store:
+Within every group (and the single list), issues are ordered by issue store, in
+config-file order, then newest (highest number) first. For example, a compact single
+list:
 
 ```yaml
 output_ordering:
-  grouped_by_tags: false
-  ordered_by_provider: true
   show_tag_heading: false
+```
+
+```
+Priority: todo, urgent
+----------------------------------------
+ - 🅆/57 order more anvils (urgent)
+ - 🅆/6 fix the rocket skates (urgent)
+
+----------------------------------------
+ - 🅆/41 paint the tunnel on the canyon wall (desert)
+ - 🅆/4 test the giant magnet ()
+ - 🄿/87 practise the banjo ()
+ - 🄿/30 book the swamp for rehearsal (music)
 ```
 
 ### Filtering
