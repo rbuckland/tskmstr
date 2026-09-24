@@ -58,7 +58,6 @@ pub struct GitHubRepository {
     pub id: String,
 
     /// In output, Where color is appropriate, together with the ID, this will be used
-    #[allow(dead_code)]
     pub color: String,
 
     /// the github Owner of the repository
@@ -87,8 +86,34 @@ impl IssueTaskRepository for GitHubRepository {
     }
 }
 
-
 #[derive(Deserialize, Serialize)]
 pub struct NewComment {
     pub body: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct GitHubUser {
+    pub login: String,
+}
+
+/// Full issue payload from `GET /repos/{owner}/{repo}/issues/{number}`
+#[derive(Debug, Deserialize, Clone)]
+pub struct GitHubIssueDetail {
+    pub number: u32,
+    pub title: String,
+    pub html_url: String,
+    pub state: String,
+    pub body: Option<String>,
+    pub user: Option<GitHubUser>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+    pub labels: Vec<GitHubLabel>,
+}
+
+/// One entry from `GET /repos/{owner}/{repo}/issues/{number}/comments`
+#[derive(Debug, Deserialize, Clone)]
+pub struct GitHubComment {
+    pub body: Option<String>,
+    pub user: Option<GitHubUser>,
+    pub created_at: Option<String>,
 }

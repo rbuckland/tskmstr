@@ -6,9 +6,12 @@ use reqwest::{
     Client,
 };
 
-use crate::providers::common::{credentials::HasSecretToken, model::Issue};
-use crate::providers::github::model::GitHubConfig;
-use crate::providers::{common::model::Label, github::model::GitHubIssue};
+use crate::providers::common::{
+    credentials::HasSecretToken,
+    model::{Comment, Issue, IssueDetail, Label},
+};
+use crate::providers::github::model::GitHubIssue;
+use crate::providers::github::model::{GitHubComment, GitHubConfig, GitHubIssueDetail};
 
 use serde_json::json;
 
@@ -74,7 +77,9 @@ pub async fn collect_tasks_from_github(
         for (_idx, repo) in g
             .repositories
             .iter()
-            .filter(|&r| issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p))
+            .filter(|&r| {
+                issue_store_id.is_none() || issue_store_id.as_deref().is_some_and(|p| r.id == p)
+            })
             .enumerate()
         {
             let optional_filter = repo
@@ -101,6 +106,7 @@ pub async fn collect_tasks_from_github(
                 let github_issues: Vec<GitHubIssue> = serde_json::from_str(&body)?;
                 let issues = github_issues.into_iter().map(|github_issue| Issue {
                     id: format!("{}/{}", repo.id, github_issue.number),
+                    color: Some(repo.color.clone()),
                     title: github_issue.title,
                     html_url: github_issue.html_url,
                     tags: github_issue
@@ -117,7 +123,6 @@ pub async fn collect_tasks_from_github(
                     repo.repo,
                     response.status(),
                     response.text().await?,
-
                 );
             }
         }
@@ -280,8 +285,86 @@ pub async fn add_comment_to_github_issue(
     if response.status().is_success() {
         println!("Comment added successfully.");
     } else {
-        eprintln!("Error: Unable to add a comment to the issue. Status: {:?}", response.status());
+        eprintln!(
+            "Error: Unable to add a comment to the issue. Status: {:?}",
+            response.status()
+        );
     }
 
     Ok(())
+}
+
+/// Fetch one issue with its comments, for `tskmstr view`.
+pub async fn view_issue_github(
+    github_config: &GitHubConfig,
+    repo_config: &GitHubRepository,
+    issue_number: &str,
+) -> Result<IssueDetail, anyhow::Error> {
+    let client = Client::new();
+    let base = format!(
+        "{}/repos/{}/{}/issues/{}",
+        github_config.endpoint, repo_config.owner, repo_config.repo, issue_number
+    );
+    let token = github_config.get_token();
+
+    let response = client
+        .get(&base)
+        .headers(construct_github_header(&token))
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        anyhow::bail!(
+            "Unable to fetch issue {}/{} from GitHub ({}/{}). Status: {}",
+            repo_config.id,
+            issue_number,
+            repo_config.owner,
+            repo_config.repo,
+            response.status()
+        );
+    }
+    let detail: GitHubIssueDetail = response.json().await?;
+
+    let response = client
+        .get(format!("{}/comments?per_page=100", base))
+        .headers(construct_github_header(&token))
+        .send()
+        .await?;
+    let comments: Vec<GitHubComment> = if response.status().is_success() {
+        response.json().await?
+    } else {
+        debug!(
+            "Unable to fetch comments for {}/{}: {}",
+            repo_config.id,
+            issue_number,
+            response.status()
+        );
+        Vec::new()
+    };
+
+    Ok(IssueDetail {
+        issue: Issue {
+            id: format!("{}/{}", repo_config.id, detail.number),
+            color: Some(repo_config.color.clone()),
+            title: detail.title,
+            html_url: detail.html_url,
+            tags: detail
+                .labels
+                .into_iter()
+                .map(|l| Label { name: l.name })
+                .collect(),
+        },
+        state: Some(detail.state),
+        body: detail.body.filter(|b| !b.trim().is_empty()),
+        author: detail.user.map(|u| u.login),
+        created_at: detail.created_at,
+        updated_at: detail.updated_at,
+        comments: comments
+            .into_iter()
+            .map(|c| Comment {
+                author: c.user.map(|u| u.login),
+                created_at: c.created_at,
+                body: c.body.unwrap_or_default(),
+            })
+            .collect(),
+    })
 }

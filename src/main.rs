@@ -3,19 +3,15 @@ use anyhow::Result;
 use log::{debug, error, info, warn};
 
 use clap::{Parser, Subcommand};
-use providers::jira::methods::list_jira_transition_ids;
+use tskmstr::providers::jira::methods::list_jira_transition_ids;
 
-mod config;
-mod control;
-mod output;
-mod providers;
-
-use config::AppConfig;
-use control::*;
 use std::{collections::HashSet, path::PathBuf, str::FromStr};
+use tskmstr::config::AppConfig;
+use tskmstr::control::*;
 
-use output::{aggregate_and_display_all_tasks, list_issue_stores};
-
+use tskmstr::output::{
+    aggregate_and_display_all_tasks, display_issue_detail, list_issue_stores, list_providers,
+};
 
 #[derive(Debug, Parser)]
 #[command(name = "t")]
@@ -62,8 +58,12 @@ enum Command {
     #[command(subcommand)]
     Tags(TagsCommand),
 
-    /// List issue/task stores
-    IssueStores,
+    /// List, add and inspect issue/task stores (repositories, projects)
+    IssueStores {
+        #[command(subcommand)]
+        // optional: `issue-stores` on its own lists the configured stores
+        cmd: Option<IssueStoresCommand>,
+    },
 
     /// Initialise a new tskmstr configuration file
     Init {
@@ -73,8 +73,13 @@ enum Command {
     },
 
     /// Show Jira Transitions allowed for a given ID
-    JiraTransitions {
-        id: String,
+    JiraTransitions { id: String },
+
+    /// Show the full detail of one or more issues/tasks (description, comments)
+    View {
+        /// Issue ids to show, e.g. P/78 J/ABC-123
+        #[arg(required = true)]
+        ids: Vec<String>,
     },
 
     /// default action, list all issues
@@ -111,6 +116,33 @@ impl FromStr for CloseCommand {
     }
 }
 
+#[derive(Subcommand, Debug)]
+enum IssueStoresCommand {
+    /// List the configured issue/task stores (default)
+    List,
+
+    /// List the configured providers (credential + endpoint) that stores can be added to
+    ListProviders,
+
+    /// Add a new issue/task store to an existing provider in the config file
+    ///
+    /// Example: tskmstr issue-stores add SPG github/rbuckland_sqce sqc-internal/pretty_goat blue
+    Add {
+        /// Short, unique id for the store (used as the issue id prefix, e.g. SPG/12)
+        shortcode: String,
+
+        /// The provider_id of a configured provider (see `issue-stores list-providers`)
+        provider: String,
+
+        /// GitHub: <owner>/<repo>; GitLab: <group>/<project> or a numeric id; Jira: the project key
+        target: String,
+
+        /// Color used when displaying the store id (red, blue, "bright green", ...)
+        #[arg(default_value = "white")]
+        color: String,
+    },
+}
+
 #[derive(Parser, Debug)]
 enum TagsCommand {
     /// Add more tags to the issue/task/item
@@ -129,7 +161,11 @@ struct TagOperationParameters {
     tags: Vec<String>,
 }
 
-async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
+async fn do_work(
+    args: &Cli,
+    config_path: &std::path::Path,
+    config: &AppConfig,
+) -> Result<(), anyhow::Error> {
     // Initialize your logger
     if args.debug || config.debug.is_some() {
         // Set up the logger with the desired log level
@@ -161,8 +197,34 @@ async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
             let tag_set: &HashSet<String> = &tag_removals.tags.clone().into_iter().collect();
             remove_tags_from_task(config, tag_removals.id.clone(), tag_set).await?;
         }
-        Some(Command::IssueStores) => {
+        Some(Command::IssueStores { cmd: None })
+        | Some(Command::IssueStores {
+            cmd: Some(IssueStoresCommand::List),
+        }) => {
             list_issue_stores(config).await?;
+        }
+        Some(Command::IssueStores {
+            cmd: Some(IssueStoresCommand::ListProviders),
+        }) => {
+            list_providers(config);
+        }
+        Some(Command::IssueStores {
+            cmd:
+                Some(IssueStoresCommand::Add {
+                    shortcode,
+                    provider,
+                    target,
+                    color,
+                }),
+        }) => {
+            tskmstr::config::add_issue_store(
+                config_path,
+                config,
+                shortcode,
+                provider,
+                target,
+                color,
+            )?;
         }
         Some(Command::Init { .. }) => {
             // handled in main before config loading
@@ -171,10 +233,20 @@ async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
         Some(Command::JiraTransitions { id }) => {
             list_jira_transition_ids(&config.jira[0], id).await?;
         }
+        Some(Command::View { ids }) => {
+            for (i, id) in ids.iter().enumerate() {
+                if i > 0 {
+                    println!("{:=<60}", "=");
+                    println!();
+                }
+                let detail = view_task(config, id).await?;
+                display_issue_detail(&detail, colors);
+            }
+        }
         Some(Command::List {
             issue_store_id,
             all,
-        }) => aggregate_and_display_all_tasks(issue_store_id, config, colors, &all).await?,
+        }) => aggregate_and_display_all_tasks(issue_store_id, config, colors, all).await?,
         None => aggregate_and_display_all_tasks(&None, config, colors, &false).await?,
     };
 
@@ -185,29 +257,15 @@ async fn do_work(args: &Cli, config: &AppConfig) -> Result<(), anyhow::Error> {
 async fn main() -> Result<(), anyhow::Error> {
     let args = Cli::parse();
 
-    let config_file = match &args.config {
-        Some(x) => PathBuf::from(x).as_os_str().to_owned(),
-        None => {
-            let home = std::env::var("HOME")
-                .unwrap_or_else(|_| panic!("HOME environment variable not set"));
-            let mut p = std::ffi::OsString::from(home);
-            p.push("/.config/tskmstr/tskmstr.config.yml");
-            p
-        }
-    };
-    let config_path = PathBuf::from(&config_file);
+    let config_path = tskmstr::config::resolve_config_path(&args.config);
 
     // Handle init before attempting to load config
     if let Some(Command::Init { force }) = &args.cmd {
         return do_init(&config_path, *force);
     }
 
-    let filename = config_file.clone().into_string().unwrap();
-    let contents = std::fs::read_to_string(&config_file)
-        .expect(format!("Failed to open file {}", filename).as_str());
-    let config: AppConfig = serde_yaml::from_str(&contents)
-        .expect(format!("Failed to load file {}", filename).as_str());
-    do_work(&args, &config).await
+    let config = tskmstr::config::load_config(&config_path)?;
+    do_work(&args, &config_path, &config).await
 }
 
 fn do_init(config_path: &PathBuf, force: bool) -> Result<(), anyhow::Error> {
@@ -234,6 +292,13 @@ labels:
   priority_labels:
     - urgent
     - todo
+
+# How `tskmstr list` lays out the issues (all optional, defaults shown).
+# Priority-labelled issues are always listed first under their own heading.
+output_ordering:
+  grouped_by_tags: true       # false = one flat list after the priority group
+  ordered_by_provider: false  # true = keep issues from the same store together
+  show_tag_heading: true      # false = no "Tag: ..." heading above each group
 
 # ---------------------------------------------------------------------------
 # GitHub configuration  (remove this section if not used)

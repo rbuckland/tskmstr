@@ -8,7 +8,6 @@ use crate::{
     providers::common::credentials::{CredentialKeyringEntry, HasSecretToken},
 };
 
-
 #[serde_inline_default]
 #[derive(Debug, Deserialize, Clone)]
 pub struct GitLabConfig {
@@ -34,7 +33,6 @@ impl HasSecretToken for GitLabConfig {
     }
 }
 
-
 // New type for GitLab labels
 #[derive(Debug, Deserialize, Clone)]
 pub struct GitLabLabel(pub String);
@@ -57,7 +55,6 @@ pub struct GitLabRepository {
     pub id: String,
 
     /// In output, Where color is appropriate, together with the ID, this will be used
-    #[allow(dead_code)]
     pub color: String,
 
     /// the gitlab project ID, this is either the "number", or
@@ -83,4 +80,35 @@ impl IssueTaskRepository for GitLabRepository {
     fn id(&self) -> String {
         self.id.clone()
     }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct GitLabAuthor {
+    pub name: Option<String>,
+    pub username: Option<String>,
+}
+
+/// Full issue payload from `GET /api/v4/projects/{id}/issues/{iid}`
+#[derive(Debug, Deserialize, Clone)]
+pub struct GitLabIssueDetail {
+    pub iid: u32,
+    pub title: String,
+    pub web_url: String,
+    pub state: String,
+    pub description: Option<String>,
+    pub author: Option<GitLabAuthor>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+    pub labels: Vec<GitLabLabel>,
+}
+
+/// One entry from `GET /api/v4/projects/{id}/issues/{iid}/notes`
+#[derive(Debug, Deserialize, Clone)]
+pub struct GitLabNote {
+    pub body: Option<String>,
+    pub author: Option<GitLabAuthor>,
+    pub created_at: Option<String>,
+    /// System notes are automated ("changed the description", "added label")
+    #[serde(default)]
+    pub system: bool,
 }

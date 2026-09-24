@@ -90,7 +90,6 @@ pub struct JiraProject {
     pub id: String,
 
     /// In output, Where color is appropriate, together with the ID, this will be used
-    #[allow(dead_code)]
     pub color: String,
 
     /// the Jira project key, e.g., "PROJ123"
@@ -122,4 +121,51 @@ impl IssueTaskRepository for JiraProject {
     fn id(&self) -> String {
         self.id.clone()
     }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JiraUser {
+    #[serde(rename = "displayName")]
+    pub display_name: Option<String>,
+    #[serde(rename = "emailAddress")]
+    pub email_address: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JiraStatus {
+    pub name: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JiraComment {
+    pub author: Option<JiraUser>,
+    pub created: Option<String>,
+    /// Plain text / wiki markup body (REST API v2)
+    pub body: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JiraCommentPage {
+    #[serde(default)]
+    pub comments: Vec<JiraComment>,
+}
+
+/// `fields` of `GET /rest/api/2/issue/{key}` (v2 returns description and
+/// comment bodies as plain strings, unlike the v3 document format)
+#[derive(Debug, Deserialize, Clone)]
+pub struct JiraDetailFields {
+    pub summary: String,
+    pub description: Option<String>,
+    pub labels: Option<Vec<String>>,
+    pub status: Option<JiraStatus>,
+    pub reporter: Option<JiraUser>,
+    pub created: Option<String>,
+    pub updated: Option<String>,
+    pub comment: Option<JiraCommentPage>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct JiraIssueDetail {
+    pub key: String,
+    pub fields: JiraDetailFields,
 }
